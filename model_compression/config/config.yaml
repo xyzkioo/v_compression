@@ -1,0 +1,88 @@
+schema_version: 1
+project:
+  root: ../../inputs
+  python_paths: []
+run:
+  enabled: true
+  root: ../user-data/runs
+  name: auto
+model:
+  name: base_model
+  adapter: torch
+  # 检测蒸馏可留空；评估、剪枝和量化使用公共权重。
+  weights: ''
+  factory: null
+  task: detect
+  device: auto
+dataset:
+  data: ''
+  train: ''
+  val: ''
+  input_size:
+  - 832
+  - 832
+compression:
+  sparsity: 0.3
+  exclude: []
+  structured:
+    method: taylor
+    target_scale: m
+    initial_weights: ''
+    finetune_epochs: 80
+    train_input_size: 1024
+    batch_size: 2
+    learning_rate: 0.001
+    optimizer: auto
+    benchmark_warmup: 5
+    benchmark_repeats: 20
+    quality_gate: true
+    max_map50_95_drop: 0.05
+    channel_sparsity: 0.1
+    channel_round: 8
+    max_pruned_layers: 6
+    stage_selection: all
+    importance_norm: 2
+    pruning_input_size: 640
+    calibration_images: 24
+    protected_stages: []
+    lamp_stage_cap: 0.375
+    bn_sparse_epochs: 4
+    bn_sparse_coefficient: 0.01
+    bn_sparse_learning_rate: 0.0004
+    bn_sparse_input_size: 640
+    search_candidates: 8
+    min_latency_gain: 0.05
+distillation:
+  # 教师须与 dataset.data 的类别名称和顺序一致。
+  teacher_weights: ''
+  # 可使用通用预训练小模型；检测头自动适配数据集，无需预先训练。
+  student_weights: ''
+  student_factory: null
+  temperature: 4.0
+  alpha: 0.5
+  epochs: 1
+  batch_size: 16
+  learning_rate: 0.001
+  seed: 0
+  dis: 6.0
+  imgsz: 832
+  optimizer: auto
+  patience: 100
+  amp: true
+  workers: 0
+evaluation:
+  split: val
+export:
+  path: null
+# 图形界面的处理模式会生成显式 only，不叠加这里的模块开关。
+# 命令行可继续使用以下开关或 --only/--enable/--disable 组织高级实验。
+modules:
+  model.parameters: true
+  baseline.evaluate: true
+  compression.quantize.dynamic_int8: false
+  compression.prune.unstructured: true
+  compression.prune.structured: false
+  distillation.classification: false
+  distillation.detection: false
+  comparison.report: false
+  artifact.export: false

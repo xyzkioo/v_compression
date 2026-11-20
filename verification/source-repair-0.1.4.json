@@ -1,0 +1,21 @@
+{
+  "component": "model_compression",
+  "catalog_isolated": true,
+  "relocated_folder": true,
+  "frontend_http": true,
+  "authenticated_api": true,
+  "editable_config": true,
+  "task_status": "succeeded",
+  "artifacts": 5,
+  "streamed_logs": true,
+  "visible_failure": true,
+  "passed": true,
+  "verified_on": "2026-10-13",
+  "version": "0.1.4",
+  "input_hashes_unchanged": true,
+  "schemas_valid": true,
+  "private_import_paths": true,
+  "limitations": [
+    "This probe covers CPU HTTP/API tasks; GPU/TensorRT and native desktop windows are not exercised by this probe"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "component": "model_compression",
+  "catalog_isolated": true,
+  "relocated_folder": true,
+  "frontend_http": true,
+  "authenticated_api": true,
+  "editable_config": true,
+  "task_status": "succeeded",
+  "artifacts": 5,
+  "streamed_logs": true,
+  "visible_failure": true,
+  "passed": true,
+  "version": "0.1.2",
+  "input_hashes_unchanged": true,
+  "schemas_valid": true,
+  "private_import_paths": true,
+  "limitations": [
+    "GPU and TensorRT not tested; native desktop window not tested"
+  ],
+  "tests": {
+    "run": 34,
+    "passed": 34,
+    "skipped": 0
+  },
+  "frontend_build_passed": true
+}

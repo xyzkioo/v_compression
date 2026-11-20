@@ -1,0 +1,8 @@
+{
+  "component": "model_compression",
+  "slug": "v_compression",
+  "title": "v_compression",
+  "version": "1.0",
+  "schema_version": 1,
+  "launcher": "v_compression"
+}

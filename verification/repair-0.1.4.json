@@ -1,0 +1,23 @@
+{
+  "version": "0.1.4",
+  "verified_on": "2026-10-13",
+  "tests": {
+    "run": 34,
+    "passed": 34,
+    "skipped": 0
+  },
+  "frontend_build_passed": true,
+  "native_entry_private_imports": true,
+  "source_syntax_valid": true,
+  "python_files": 51,
+  "documentation_links_valid": true,
+  "frontend_license_files_present": true,
+  "isolated_cpu_http_probe": "source-repair-0.1.4.json",
+  "original_vtools_files_unchanged": true,
+  "limitations": [
+    "GPU/TensorRT not tested",
+    "Native window evidence remains the historical 0.1.3 run",
+    "Desktop folder packaging recipe updated but no desktop binary bundle or deb built",
+    "AI registration declaration interpretation remains unresolved"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "component": "model_compression",
+  "version": "0.1.3",
+  "native_window_shown": true,
+  "window_title": "VTools 模型压缩",
+  "closed_cleanly": true,
+  "exit_code": 0
+}

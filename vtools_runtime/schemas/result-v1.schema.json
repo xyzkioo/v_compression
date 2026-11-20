@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VTools component result v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "component": {
+          "const": "model_compression"
+        },
+        "status": {
+          "enum": [
+            "running",
+            "succeeded",
+            "skipped",
+            "issues_found",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "enum": [
+            null,
+            0,
+            1,
+            2,
+            130
+          ]
+        },
+        "run_dir": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "error": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "message"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "\\S"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "component_version": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finished_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "backend_exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "request": {
+          "const": "request.json"
+        },
+        "config": {
+          "enum": [
+            "config.snapshot.yaml",
+            null
+          ]
+        },
+        "logs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stdout",
+            "stderr"
+          ],
+          "properties": {
+            "stdout": {
+              "const": "stdout.log"
+            },
+            "stderr": {
+              "const": "stderr.log"
+            }
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "size_bytes",
+              "kind"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "kind": {
+                "enum": [
+                  "model",
+                  "report"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "component",
+        "status",
+        "exit_code",
+        "run_dir",
+        "error",
+        "component_version",
+        "started_at",
+        "finished_at",
+        "backend_exit_code",
+        "request",
+        "config",
+        "logs",
+        "artifacts"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "component",
+        "status",
+        "exit_code",
+        "run_dir",
+        "error"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "component": {
+          "const": "model_compression"
+        },
+        "status": {
+          "const": "failed"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "run_dir": {
+          "type": "null"
+        },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "message"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+PyYAML>=6
+Pillow>=9
+numpy
+pywebview>=5
+PySide6>=6
+opencv-python

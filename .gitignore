@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+/.venv
+/pip-*/
+/torchinductor_*/
+.pytest_cache/
+node_modules/
+/build/
+/dist/
+user-data/*
+inputs/*
+/verification/
+*.egg-info/

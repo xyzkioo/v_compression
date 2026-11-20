@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -eo pipefail
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+unset PYTHONPATH LD_LIBRARY_PATH AMENT_PREFIX_PATH COLCON_PREFIX_PATH CMAKE_PREFIX_PATH ROS_DISTRO ROS_VERSION ROS_PYTHON_VERSION VIRTUAL_ENV PYTHONHOME
+export PYTHONDONTWRITEBYTECODE=1
+export VTOOLS_ULTRALYTICS_REPO="${VTOOLS_ULTRALYTICS_REPO:-$HOME/Projects/libraries/ultralytics-cn}"
+cd "$ROOT"
+exec "$ROOT/.venv/bin/python" "$@"

@@ -1,0 +1,50 @@
+[
+  {
+    "package": "react",
+    "version": "18.3.1",
+    "license": "MIT",
+    "files": [
+      "licenses/frontend/react/LICENSE"
+    ]
+  },
+  {
+    "package": "react-dom",
+    "version": "18.3.1",
+    "license": "MIT",
+    "files": [
+      "licenses/frontend/react-dom/LICENSE"
+    ]
+  },
+  {
+    "package": "lucide-react",
+    "version": "0.468.0",
+    "license": "ISC",
+    "files": [
+      "licenses/frontend/lucide-react/LICENSE"
+    ]
+  },
+  {
+    "package": "scheduler",
+    "version": "0.23.2",
+    "license": "MIT",
+    "files": [
+      "licenses/frontend/scheduler/LICENSE"
+    ]
+  },
+  {
+    "package": "loose-envify",
+    "version": "1.4.0",
+    "license": "MIT",
+    "files": [
+      "licenses/frontend/loose-envify/LICENSE"
+    ]
+  },
+  {
+    "package": "js-tokens",
+    "version": "4.0.0",
+    "license": "MIT",
+    "files": [
+      "licenses/frontend/js-tokens/LICENSE"
+    ]
+  }
+]

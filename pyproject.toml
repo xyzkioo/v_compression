@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "v_compression"
+version = "1.0"
+description = "模型压缩 application"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["PyYAML>=6", "Pillow>=9", "numpy", "pywebview>=5", "PySide6>=6", "opencv-python"]
+
+[project.optional-dependencies]
+models = ["torch", "ultralytics", "torchvision", "torch-pruning>=1.4.1"]
+build = ["pyinstaller>=6"]
+test = ["jsonschema>=4"]
+
+[project.scripts]
+v_compression = "model_compression.__main__:main"
+v_compression-ui = "vtools_ui.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["model_compression*", "vtools_ui*", "vtools_runtime*", "env_test*"]
+exclude = ["*.tests", "*.tests.*"]
+
+[tool.setuptools.package-data]
+"model_compression" = ["config/*.yaml", "benchmark_config.yaml"]
+vtools_runtime = ["schemas/*.json"]
+"vtools_ui.webapp" = ["frontend/dist/*", "frontend/dist/assets/*"]

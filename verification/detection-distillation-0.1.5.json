@@ -1,0 +1,23 @@
+{
+  "version": "0.1.5",
+  "verified_on": "2026-10-15",
+  "scratch": "/tmp/vtools-compression-distillation-real-qi_n90fz",
+  "exit_code": 0,
+  "elapsed_seconds": 7.28,
+  "status": "passed",
+  "cpu_training_epochs": 1,
+  "native_distillation_loss": true,
+  "source_nc": 80,
+  "target_nc": 16,
+  "student_parameters": 2510040,
+  "teacher_parameters": 58845528,
+  "input_hashes_unchanged": true,
+  "standalone_student_reloaded": true,
+  "artifact": "/tmp/vtools-compression-distillation-real-qi_n90fz/run/artifacts/artifacts/distillation/student-best.pt",
+  "summary": "/tmp/vtools-compression-distillation-real-qi_n90fz/run/artifacts/summary.json",
+  "limitations": [
+    "One epoch on synthetic CPU data verifies execution, not real dataset accuracy or GPU performance."
+  ],
+  "wrong_teacher_dataset_rejected_before_training": true,
+  "wrong_dataset_run": "/tmp/vtools-distill-wrong-dataset-9gsocldc/run"
+}
