@@ -9,6 +9,7 @@ COMPRESSION_MODULES: dict[str, bool] = {
     "model.parameters": True,
     "baseline.evaluate": True,
     "compression.quantize.dynamic_int8": False,
+    "compression.quantize.onnx": False,
     "compression.prune.unstructured": False,
     "compression.prune.structured": False,
     "distillation.classification": False,
@@ -44,6 +45,11 @@ COMPRESSION_MODES: dict[str, dict[str, Any]] = {
                                     '主要适合含这些层的模型。报告列出实际量化层数、验证准确率和 CPU 推理耗时。',
                      'primary_module': 'compression.quantize.dynamic_int8',
                      'modules': ['model.parameters', 'baseline.evaluate', 'compression.quantize.dynamic_int8'], 'public_weights': True},
+    'detection_quantization': {'label': '模型量化', 'tasks': ['detect'],
+                              'description': '生成固定输入的 YOLO ONNX。FP32 用于对照，FP16 使用半精度权重，INT8 用训练图片校准卷积。\n'
+                                             '两份 ONNX 在同一验证集和 ONNX Runtime CPU 上对照精度、体积和延迟。',
+                              'primary_module': 'compression.quantize.onnx',
+                              'modules': ['model.parameters', 'baseline.evaluate', 'compression.quantize.onnx'], 'public_weights': True},
     'classification_distillation': {'label': '分类知识蒸馏', 'tasks': ['classify'],
                                     'description': '学生同时学习数据集的类别标签和教师给出的软预测。temperature 控制软预测的平滑程度，alpha 调整两部分损失的权重。\n'
                                                    '在 YAML 配置教师与学生，提供分类训练集和验证集。训练会保存学生检查点供后续评估。',

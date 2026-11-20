@@ -54,6 +54,13 @@ def build_component_command(request: dict) -> tuple[str, list[str], str]:
         raise ValueError('选择处理模式时不能同时指定模块开关。')
     if mode_modules is not None:
         options['only'] = mode_modules
+    if mode == 'detection_quantization':
+        weights = resource or loaded['data'].get('model', {}).get('weights')
+        if weights and Path(weights).suffix.lower() != '.pt':
+            raise ValueError('模型量化需要 YOLO .pt 检测权重。')
+        options['device'] = 'cpu'
+        if values.get('quantization_precision'):
+            options['quantization_precision'] = values['quantization_precision']
     if mode == 'structured':
         if 'structured_methods' in values:
             options['structured_methods'] = values['structured_methods']

@@ -13,3 +13,5 @@ python -m pip install pyyaml
 ```
 
 工具不会在模块列表或查看配置时导入 PyTorch。动态 INT8 量化默认运行在 CPU，实际延迟和文件大小必须在目标设备上重新评测。
+
+YOLO ONNX 导出和静态量化需要在模型解释器安装 `onnx` 与 CPU 版 `onnxruntime`。导出 FP32、FP16 和 INT8 都用 ONNX Runtime CPU 重新加载产物并测量前向延迟。旧导出器无法转换部分自定义层时会尝试 PyTorch Dynamo，使用该路径需要 `onnxscript`。

@@ -613,8 +613,14 @@ def run_detection_operation(module_id, config, state, run_dir, run_id):
         raise ValueError('请先选择检测模型权重。' if adapter is not None else '请先选择 YOLO 模型权重。')
     weights = Path(resolved_weights)
     input_weights = weights
-    detector = load(weights)
-    metadata = parameter_metrics(detector.model)
+    if module_id == 'compression.quantize.onnx' and (custom is not None or weights.suffix.lower() != '.pt'):
+        raise ValueError('ONNX 量化需要原生或通过 load_detector 接入的 YOLO .pt 检测模型。')
+    exporting_onnx = module_id == 'artifact.export' and weights.suffix.lower() == '.onnx'
+    if exporting_onnx:
+        metadata = {}
+    else:
+        detector = load(weights)
+        metadata = parameter_metrics(detector.model)
     if module_id == 'baseline.evaluate':
         metadata.update(evaluate(detector, 'baseline_validation'))
     elif module_id == 'compression.prune.unstructured':
@@ -797,6 +803,33 @@ def run_detection_operation(module_id, config, state, run_dir, run_id):
                 '请增加微调轮数、换用更大的目标规模，或将 compression.structured.quality_gate 设为 false 仅保留实验产物。'
             )
         weights = target
+    elif module_id == 'compression.quantize.onnx':
+        from ultralytics import YOLO
+        from ..modules.onnx_quantization import export_onnx_precision
+
+        data = detection_data(config)
+        if data is None:
+            raise ValueError('ONNX 量化与复评需要检测数据集 YAML。')
+        output = run_dir / 'artifacts' / 'quantization'
+        settings = config['compression'].get('quantization', {})
+        max_drop = float(settings.get('max_map50_95_drop', 0.05))
+        if not 0 <= max_drop <= 1:
+            raise ValueError('compression.quantization.max_map50_95_drop 必须在 [0, 1] 内。')
+        candidate, reference, details = export_onnx_precision(weights, load, data, output, config)
+        validation_config = {**config, 'model': {**config['model'], 'device': 'cpu'},
+                             'evaluation': {**config.get('evaluation', {}), 'batch_size': 1}}
+        before = evaluate_detector(YOLO(str(reference), task='detect'), validation_config, run_dir, 'onnx_fp32_validation')
+        after = before if candidate == reference else evaluate_detector(
+            YOLO(str(candidate), task='detect'), validation_config, run_dir, 'onnx_quantized_validation')
+        delta = after['evaluation_map50_95'] - before['evaluation_map50_95']
+        metadata.update(details, **after, fp32_validation=before, map50_95_delta=delta,
+                        fp32_artifact=str(reference), model_file_size_bytes=candidate.stat().st_size,
+                        quality_gate={'max_map50_95_drop': max_drop, 'passed': delta >= -max_drop})
+        report_path = output / 'onnx-comparison.json'
+        write_json(report_path, {**metadata, 'artifact': candidate.name, 'fp32_artifact': reference.name})
+        if delta < -max_drop:
+            raise ValueError(f'ONNX {details["precision"]} 的 mAP50–95 降幅 {-delta:.4f} 超过 {max_drop:.4f}，请查看 {report_path}。')
+        weights = candidate
     elif module_id == 'artifact.export':
         import shutil
         source = Path(weights).resolve()
@@ -806,7 +839,12 @@ def run_detection_operation(module_id, config, state, run_dir, run_id):
         if target != source:
             target = _unique_target(target)
             shutil.copy2(source, target)
-        metadata.update(evaluate(load(target), 'export_validation'))
+        if exporting_onnx:
+            from ultralytics import YOLO
+
+            metadata.update(evaluate_detector(YOLO(str(target), task='detect'), config, run_dir, 'export_validation'))
+        else:
+            metadata.update(evaluate(load(target), 'export_validation'))
         export_info = {'source': artifact_info(source), 'target': target}
         weights = target
     elif module_id != 'model.parameters':
@@ -821,6 +859,8 @@ def run_detection_operation(module_id, config, state, run_dir, run_id):
             baseline_metadata = dict(metadata['before_unstructured_pruning'])
         elif 'before_structured_pruning' in metadata:
             baseline_metadata = dict(metadata['before_structured_pruning'])
+        elif 'fp32_validation' in metadata:
+            baseline_metadata = {**parameter_metrics(detector.model), 'model_file_size_bytes': input_weights.stat().st_size}
         baseline_metadata['task'] = 'detect'
         original = state.add_version(name=config.get('model', {}).get('name', prefix),
             artifact=input_weights, parent_version_id=None, run_id=run_id, method='baseline',
@@ -837,6 +877,11 @@ def run_detection_operation(module_id, config, state, run_dir, run_id):
         registry_method = 'structured_width_scaling' if method == 'scale' else f'structured_{method}'
         version = state.add_version(name=f'{prefix}-structured', artifact=weights, parent_version_id=head,
             run_id=run_id, method=registry_method, metadata=metadata)
+        head = version['id']
+        state.advance(head)
+    elif module_id == 'compression.quantize.onnx':
+        version = state.add_version(name=weights.stem, artifact=weights, parent_version_id=head,
+            run_id=run_id, method=metadata['method'], metadata=metadata)
         head = version['id']
         state.advance(head)
     elif module_id in {'baseline.evaluate', 'model.parameters'}:

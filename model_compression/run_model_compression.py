@@ -65,6 +65,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device", help="临时覆盖 model.device：auto、cpu、cuda:0 或 0")
     parser.add_argument("--structured-scale", help="临时覆盖结构化目标规模，例如 n、s、m、l 或 x")
     parser.add_argument("--structured-method", choices=tuple(STRUCTURED_METHODS), help="结构化剪枝方法")
+    from model_compression.modules.onnx_quantization import ONNX_PRECISIONS
+    parser.add_argument("--quantization-precision", choices=ONNX_PRECISIONS, help="检测 ONNX 精度")
     parser.add_argument("--structured-epochs", type=int, help="临时覆盖结构化缩放后的微调轮数；0 表示跳过微调")
     parser.add_argument("--structured-initial-weights", type=Path, help="结构化目标规模的预训练初始化权重")
     parser.add_argument("--list-modules", action="store_true", help="列出模块后退出")
@@ -479,6 +481,7 @@ _SUMMARY_CATEGORIES = {
     "distillation.classification": "distillation",
     "distillation.detection": "distillation",
     "compression.quantize.dynamic_int8": "quantization",
+    "compression.quantize.onnx": "quantization",
     "artifact.export": "multi_processing",
 }
 
@@ -669,7 +672,7 @@ def main() -> int:
     if (args.weights or args.train or args.val or args.device or args.data or args.task
             or args.teacher_weights or args.student_weights
             or args.structured_method is not None or args.structured_scale is not None or args.structured_epochs is not None
-            or args.structured_initial_weights is not None):
+            or args.structured_initial_weights is not None or args.quantization_precision is not None):
         config = dict(config)
         model = dict(_section(config, "model"))
         dataset = dict(_section(config, "dataset"))
@@ -708,6 +711,12 @@ def main() -> int:
                 structured["initial_weights"] = str(args.structured_initial_weights.expanduser().resolve())
             compression["structured"] = structured
             config["compression"] = compression
+        if args.quantization_precision is not None:
+            compression = dict(_section(config, "compression"))
+            compression["quantization"] = {
+                **_section(compression, "quantization"), "precision": args.quantization_precision,
+            }
+            config["compression"] = compression
         config["model"] = model
         config["dataset"] = dataset
     apply_python_paths(config)
@@ -735,7 +744,7 @@ def main() -> int:
     failures: list[str] = []
     failed_dependencies: set[str] = set()
     transform_modules = {
-        "compression.quantize.dynamic_int8", "compression.prune.unstructured",
+        "compression.quantize.dynamic_int8", "compression.quantize.onnx", "compression.prune.unstructured",
         "compression.prune.structured", "distillation.classification", "distillation.detection",
         "artifact.export", "comparison.report",
     }
@@ -747,6 +756,7 @@ def main() -> int:
         ("compression.prune.structured", lambda: _run_structured_prune(config, state, run_dir, run_id)),
         ("distillation.classification", lambda: _run_distillation(config, state, run_dir, run_id)),
         ("distillation.detection", lambda: (_ for _ in ()).throw(ValueError("检测蒸馏仅支持 detect 任务，请设置 model.task: detect。"))),
+        ("compression.quantize.onnx", lambda: (_ for _ in ()).throw(ValueError("ONNX 量化仅支持 YOLO 检测模型。"))),
         ("comparison.report", lambda: _run_comparison(state)),
         ("artifact.export", lambda: _run_export(config, state, run_dir)),
     )

@@ -11,7 +11,7 @@ SQUARE_SIZE_FIELDS = {
     "compression.structured.bn_sparse_input_size",
 }
 STRING_LIST_FIELDS = {
-    "project.python_paths", "compression.exclude", "layers.modules",
+    "project.python_paths", "compression.exclude", "compression.quantization.nodes_to_exclude", "layers.modules",
     "pytorch.precisions", "consistency.input_names",
 }
 
@@ -61,6 +61,12 @@ FIELD_HINTS = {
     "compression.sparsity": "非结构化剪枝的权重置零比例，如 0.3 表示 30%。",
     "compression.exclude": "不参与非结构化剪枝的层名，用逗号分隔。",
     "compression.structured.method": "结构化方法：torch_pruning、taylor、lamp、fisher、bn_gamma、latency_search 或 scale。",
+    "compression.quantization.precision": "检测 ONNX 精度，可填 fp32、fp16 或 int8。界面可以为本次运行覆盖。",
+    "compression.quantization.calibration_images": "INT8 从训练集取样的图片数上限。",
+    "compression.quantization.per_channel": "INT8 卷积权重按输出通道量化。",
+    "compression.quantization.nodes_to_exclude": "设置需要保留浮点精度的 ONNX 节点名。",
+    "compression.quantization.cpu_threads": "ONNX Runtime 纯前向测速的 CPU 线程数。",
+    "compression.quantization.max_map50_95_drop": "相对 FP32 ONNX 的最大 mAP50–95 降幅。",
     "compression.structured.calibration_images": "Taylor、Fisher 和速度搜索从训练集取样的图片上限。",
     "compression.structured.protected_stages": "不作为剪枝根或删块候选的顶层阶段编号，例如 1, 3。",
     "compression.structured.lamp_stage_cap": "LAMP 下单个候选层最多删除的通道比例。",

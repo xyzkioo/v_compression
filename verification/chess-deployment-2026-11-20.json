@@ -1,0 +1,480 @@
+{
+  "version": "1.0",
+  "date": "2026-11-20",
+  "model": "YOLO11s, 14 Chinese-chess piece classes",
+  "software": {
+    "os": "Windows",
+    "torch": "2.11.0+cu128",
+    "ultralytics": "8.4.208",
+    "onnxruntime": "1.31.1",
+    "nncase": "2.11.0"
+  },
+  "pytorch_gpu": {
+    "device": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "batch": 1,
+    "timing_scope": "Decoded BGR frame to CPU detection boxes, excluding image acquisition and decode",
+    "timing_frames": "24 validation images, 4 repetitions per size, counterbalanced per-frame order",
+    "thresholds": {
+      "confidence": 0.25,
+      "nms_iou": 0.7,
+      "match_iou": 0.5
+    },
+    "fp32_input_size_comparison": {
+      "832": {
+        "p50_ms": 30.7394999981625,
+        "p95_ms": 40.18279999945662,
+        "fps": 31.96774028781921,
+        "timed_frames": 96,
+        "validation": {
+          "map50_95": 0.5873499070726285,
+          "fp": 189,
+          "fn": 101,
+          "quality_frames": 71
+        },
+        "deduplicated_holdout": {
+          "map50_95": 0.46063999477943196,
+          "fp": 42,
+          "fn": 19,
+          "quality_frames": 13
+        }
+      },
+      "640": {
+        "p50_ms": 28.45030000025872,
+        "p95_ms": 39.235500000359025,
+        "fps": 33.63838324559524,
+        "timed_frames": 96,
+        "validation": {
+          "map50_95": 0.5978628175953626,
+          "fp": 173,
+          "fn": 109,
+          "quality_frames": 71
+        },
+        "deduplicated_holdout": {
+          "map50_95": 0.4833226779229867,
+          "fp": 42,
+          "fn": 16,
+          "quality_frames": 13
+        }
+      },
+      "416": {
+        "p50_ms": 27.2677000011754,
+        "p95_ms": 37.180499999522,
+        "fps": 34.84430204760732,
+        "timed_frames": 96,
+        "validation": {
+          "map50_95": 0.5646023344453072,
+          "fp": 202,
+          "fn": 168,
+          "quality_frames": 71
+        },
+        "deduplicated_holdout": {
+          "map50_95": 0.4717858189043152,
+          "fp": 43,
+          "fn": 21,
+          "quality_frames": 13
+        }
+      }
+    },
+    "cached_predictor": {
+      "fp32-832": {
+        "standard": {
+          "p50_ms": 34.205600000859704,
+          "p95_ms": 40.7286000008753,
+          "fps": 30.502239712062394,
+          "frames": 72
+        },
+        "cached_predictor": {
+          "p50_ms": 33.85295000043698,
+          "p95_ms": 40.14439999809838,
+          "fps": 31.217231391535428,
+          "frames": 72
+        },
+        "exact_match": 71,
+        "validation_images": 71
+      },
+      "fp32-640": {
+        "standard": {
+          "p50_ms": 34.19990000111284,
+          "p95_ms": 39.687800002866425,
+          "fps": 31.68072168658183,
+          "frames": 72
+        },
+        "cached_predictor": {
+          "p50_ms": 33.25039999799628,
+          "p95_ms": 38.70920000190381,
+          "fps": 31.692509413885805,
+          "frames": 72
+        },
+        "exact_match": 71,
+        "validation_images": 71
+      },
+      "fp16-640": {
+        "standard": {
+          "p50_ms": 32.33774999898742,
+          "p95_ms": 40.78599999775179,
+          "fps": 30.99722996694756,
+          "frames": 72
+        },
+        "cached_predictor": {
+          "p50_ms": 31.43265000107931,
+          "p95_ms": 40.47799999898416,
+          "fps": 31.621350489837702,
+          "frames": 72
+        },
+        "exact_match": 71,
+        "validation_images": 71
+      },
+      "fp32-416": {
+        "standard": {
+          "p50_ms": 33.1937500013737,
+          "p95_ms": 36.44229999918025,
+          "fps": 33.84571992660806,
+          "frames": 72
+        },
+        "cached_predictor": {
+          "p50_ms": 27.059849999204744,
+          "p95_ms": 35.95070000301348,
+          "fps": 35.048146660852325,
+          "frames": 72
+        },
+        "exact_match": 71,
+        "validation_images": 71
+      },
+      "fp16-416": {
+        "standard": {
+          "p50_ms": 35.328950001712656,
+          "p95_ms": 38.591699998505646,
+          "fps": 30.45822882368354,
+          "frames": 72
+        },
+        "cached_predictor": {
+          "p50_ms": 34.99600000031933,
+          "p95_ms": 37.401999998110114,
+          "fps": 31.21487784322296,
+          "frames": 72
+        },
+        "exact_match": 71,
+        "validation_images": 71
+      }
+    },
+    "small_model_training": {
+      "student": "YOLO11n",
+      "teacher": "YOLO11s",
+      "epochs_per_candidate": 24,
+      "training_images": 381,
+      "input": 416,
+      "batch": 16,
+      "seed": 42,
+      "optimizer": "AdamW",
+      "initial_learning_rate": 0.0025,
+      "amp": false,
+      "distillation_weight": 6.0,
+      "results": {
+        "student-supervised-416": {
+          "params": 2592570,
+          "fps": 29.76982836976016,
+          "p95_ms": 39.7475999998278,
+          "map50_95": 0.03206995390775894,
+          "fp": 355,
+          "fn": 1579,
+          "quality_frames": 71
+        },
+        "student-distilled-416": {
+          "params": 2592570,
+          "fps": 34.222048239033676,
+          "p95_ms": 40.03589999774704,
+          "map50_95": 0.026073509887581343,
+          "fp": 124,
+          "fn": 1697,
+          "quality_frames": 71
+        }
+      }
+    },
+    "structure_comparison_416_fp16": {
+      "original-fp16-416": {
+        "params": 9433210,
+        "fps": 32.72942543082726,
+        "p95_ms": 38.80849999768543,
+        "map50_95": 0.5648398226341874,
+        "fp": 202,
+        "fn": 168,
+        "quality_frames": 71
+      },
+      "taylor-stage7-416": {
+        "params": 9072506,
+        "fps": 31.785072167477814,
+        "p95_ms": 41.15920000185724,
+        "map50_95": 0.5643691176770228,
+        "fp": 212,
+        "fn": 162,
+        "quality_frames": 71
+      },
+      "bottleneck-taylor-416": {
+        "params": 9018090,
+        "fps": 29.5774042106532,
+        "p95_ms": 41.77450000133831,
+        "map50_95": 0.564742178708658,
+        "fp": 142,
+        "fn": 215,
+        "quality_frames": 71
+      }
+    },
+    "crop_comparison_320_fp32": {
+      "original-320": {
+        "roi_padding": null,
+        "fps": 45.58795353591523,
+        "p95_ms": 26.290800000424497,
+        "map50_95": 0.48344907278382215,
+        "fp": 297,
+        "fn": 322,
+        "quality_frames": 71
+      },
+      "original-roi-320": {
+        "roi_padding": 0.18,
+        "fps": 20.155233367932397,
+        "p95_ms": 102.82460000235005,
+        "map50_95": 0.5348140176513976,
+        "fp": 287,
+        "fn": 294,
+        "quality_frames": 71
+      }
+    }
+  },
+  "onnx_cpu": {
+    "provider": "CPUExecutionProvider",
+    "calibration_split": "train",
+    "calibration_images": 300,
+    "input_size": [
+      320,
+      320
+    ],
+    "file_size_reduction": 0.7359621193113064,
+    "forward_p50_ms": {
+      "fp32": 47.026399999595014,
+      "int8": 89.22199999869918
+    },
+    "validation": {
+      "distinct_validation_images": 71,
+      "identical_train_val_images": 0,
+      "fp32": {
+        "evaluation_map50": 0.8815539744378451,
+        "evaluation_map50_95": 0.49942750879392417,
+        "evaluation_precision": 0.8860829664599457,
+        "evaluation_recall": 0.7750763493016263
+      },
+      "int8": {
+        "evaluation_map50": 0.8783728057426943,
+        "evaluation_map50_95": 0.5062812928893695,
+        "evaluation_precision": 0.8797654734969315,
+        "evaluation_recall": 0.7762965211045475
+      },
+      "map50_95_delta": 0.006853784095445348,
+      "quality_gate": {
+        "max_map50_95_drop": 0.05,
+        "passed": true
+      }
+    }
+  },
+  "deployment_probe_128": {
+    "input": 128,
+    "timing_scope": "Image file to CPU detection boxes",
+    "reference": {
+      "read_decode": {
+        "p50_ms": 10.740050000094925,
+        "p95_ms": 71.45300000047428
+      },
+      "preprocess": {
+        "p50_ms": 0.4441500004759291,
+        "p95_ms": 0.690799999574665
+      },
+      "forward": {
+        "p50_ms": 10.496349997993093,
+        "p95_ms": 14.919100001861807
+      },
+      "postprocess": {
+        "p50_ms": 3.0175500014593126,
+        "p95_ms": 5.884500002139248
+      },
+      "end_to_end": {
+        "p50_ms": 28.08665000156907,
+        "p95_ms": 88.22309999959543
+      }
+    },
+    "variants": {
+      "fp16": {
+        "timings": {
+          "read_decode": {
+            "p50_ms": 11.333200001899968,
+            "p95_ms": 73.2081999994989
+          },
+          "preprocess": {
+            "p50_ms": 0.453349997769692,
+            "p95_ms": 0.7332999994105194
+          },
+          "forward": {
+            "p50_ms": 9.721450000142795,
+            "p95_ms": 12.661500000831438
+          },
+          "postprocess": {
+            "p50_ms": 2.81005000215373,
+            "p95_ms": 5.4751999996369705
+          },
+          "end_to_end": {
+            "p50_ms": 25.988149998738663,
+            "p95_ms": 86.32509999733884
+          }
+        },
+        "comparison": {
+          "raw_allclose": false,
+          "max_abs_output_difference": 0.7610321044921875,
+          "matching_detection_frames": 3,
+          "frames": 24,
+          "end_to_end_p50_ratio": 1.0807483411836647,
+          "reference_boxes": 290,
+          "candidate_boxes": 290
+        }
+      },
+      "int8": {
+        "timings": {
+          "read_decode": {
+            "p50_ms": 10.915900000327383,
+            "p95_ms": 73.49869999961811
+          },
+          "preprocess": {
+            "p50_ms": 0.4061500003444962,
+            "p95_ms": 0.8114999982353766
+          },
+          "forward": {
+            "p50_ms": 20.090849999178317,
+            "p95_ms": 26.3505000002624
+          },
+          "postprocess": {
+            "p50_ms": 2.781900000627502,
+            "p95_ms": 5.659300000843359
+          },
+          "end_to_end": {
+            "p50_ms": 37.221149999822956,
+            "p95_ms": 96.76669999680598
+          }
+        },
+        "comparison": {
+          "raw_allclose": false,
+          "max_abs_output_difference": 57.3426628112793,
+          "matching_detection_frames": 2,
+          "frames": 24,
+          "end_to_end_p50_ratio": 0.7545884531161091,
+          "reference_boxes": 290,
+          "candidate_boxes": 297
+        }
+      },
+      "slim": {
+        "timings": {
+          "read_decode": {
+            "p50_ms": 11.310699999739882,
+            "p95_ms": 72.84720000097877
+          },
+          "preprocess": {
+            "p50_ms": 0.38314999983413145,
+            "p95_ms": 0.7293999988178257
+          },
+          "forward": {
+            "p50_ms": 10.751350000646198,
+            "p95_ms": 14.493399998173118
+          },
+          "postprocess": {
+            "p50_ms": 2.949350000562845,
+            "p95_ms": 6.013100002746796
+          },
+          "end_to_end": {
+            "p50_ms": 27.973500000371132,
+            "p95_ms": 87.78969999912078
+          }
+        },
+        "comparison": {
+          "raw_allclose": true,
+          "max_abs_output_difference": 0.0,
+          "matching_detection_frames": 24,
+          "frames": 24,
+          "end_to_end_p50_ratio": 1.004044899679927,
+          "reference_boxes": 290,
+          "candidate_boxes": 290
+        }
+      }
+    },
+    "simplification": {
+      "original_nodes": 353,
+      "simplified_nodes": 318
+    },
+    "cuda_nms": {
+      "status": "passed",
+      "device": "NVIDIA GeForce RTX 5060 Laptop GPU",
+      "matching_frames": 24,
+      "frames": 24,
+      "detections": 290,
+      "scope": "resident tensor to NMS output with device synchronization",
+      "cpu": {
+        "p50_ms": 0.4763999986607814,
+        "p95_ms": 0.7449000004271511
+      },
+      "cuda": {
+        "p50_ms": 1.9634500004030997,
+        "p95_ms": 2.755599998636171
+      }
+    },
+    "cuda_preprocessing": {
+      "status": "passed",
+      "scope": "decoded BGR image to RGB NCHW letterbox tensor, excludes image decode",
+      "device": "NVIDIA GeForce RTX 5060 Laptop GPU",
+      "max_abs_normalized_difference": 0.003921627998352051,
+      "allowed_difference": 0.00788235294117647,
+      "host_to_device": {
+        "p50_ms": 0.30729999889445025,
+        "p95_ms": 2.7369000017642975
+      },
+      "preprocess": {
+        "p50_ms": 0.4793999978573993,
+        "p95_ms": 1.3822999972035177
+      },
+      "transfer_and_preprocess": {
+        "p50_ms": 0.7691999999224208,
+        "p95_ms": 4.124099999899045
+      }
+    },
+    "cuda_streams": {
+      "status": "passed",
+      "device": "NVIDIA GeForce RTX 5060 Laptop GPU",
+      "scope": "pinned preprocessed tensor upload and PyTorch FP16 forward",
+      "matching_frames": 72,
+      "frames": 72,
+      "serial_total_ms": 2689.4851999968523,
+      "two_stream_total_ms": 2392.267899998842,
+      "throughput_ratio": 1.124240809316613
+    }
+  },
+  "k230": {
+    "runtime": "nncase 2.11.0 Windows simulator",
+    "input": 320,
+    "calibration_images": 64,
+    "kmodel_size_bytes": 10274488,
+    "simulation_frames": 4,
+    "thresholds": {
+      "confidence": 0.25,
+      "nms_iou": 0.7,
+      "match_iou": 0.5
+    },
+    "onnx": {
+      "tp": 76,
+      "fp": 19,
+      "fn": 10
+    },
+    "kmodel": {
+      "tp": 74,
+      "fp": 17,
+      "fn": 12
+    }
+  },
+  "outstanding": [
+    "K230, Jetson, MaixCAM and Orange Pi on-device FPS and accuracy",
+    "Jetson TensorRT FP16 and INT8 engine verification"
+  ]
+}

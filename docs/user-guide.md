@@ -22,6 +22,20 @@ Taylor、Fisher、BN-γ 和速度搜索需要有标签的训练集；试剪时�
 
 自定义检测模型通过 YAML 的 `model.adapter` 选择 adapter。工具自动执行参数统计和基线评估，并用同一个 adapter 评估保存后重新加载的剪枝模型。通用 PyTorch 检测 adapter 可以使用非结构化剪枝、幅值通道剪枝、LAMP、Taylor 和 Fisher。接入条件和模板见[检测 adapter 接口](interface.md#自定义检测-adapter)。
 
+检测模型可选「模型量化」，填写 YOLO `.pt` 和检测数据集 YAML，然后选择 FP32、FP16 或静态 INT8。FP32 导出基线，FP16 生成半精度图，INT8 从 `train` 取样校准卷积。模型和 `onnx-comparison.json` 位于业务运行目录的 `artifacts/quantization/`，可对照两份 ONNX 的 mAP、文件体积和 CPU 前向延迟。FP16 图在 CPU 上的算子执行精度和速度由运行时决定。
+
+## 部署回归测试
+
+在源码仓库根目录，用同一批真实图片检查固定尺寸 ONNX。报告记录读图解码、预处理、前向、后处理和整段延迟的 P50、P95，以及端到端 FPS。FPS 使用预热后帧数除以总计时，同一轮中的 ONNX 输入尺寸必须匹配。指定 `--labels` 后另记录各组置信度和 NMS 阈值下的误检、漏检与召回率。输入按 YOLO 标注约定配对，阈值对照使用验证集。
+
+```bash
+python -m model_compression.tests.deployment_probe --reference /path/model-fp32.onnx --variant fp16=/path/model-fp16.onnx --variant int8=/path/model-int8.onnx --images /data/images/val --labels /data/labels/val --run-dir user-data/runs/deploy-probe --simplify --cuda-nms --cuda-preprocess --cuda-weights /path/best.pt
+```
+
+`--simplify` 需要安装 `onnxslim`，执行图简化、张量与检测结果一致性检查。CUDA 项需要可用的 PyTorch CUDA，GPU NMS 还需要配套的 `torchvision`。报告分别记录显存张量做 NMS、已解码图片的上传和预处理，以及双缓冲上传与推理。整段计时覆盖图片文件到检测框，保存在新目录的 `deployment-comparison.json`。板端验收使用目标设备及其运行时重复采集耗时和精度。
+
+比较 PyTorch 输入尺寸时，可固定同一个权重和 batch=1，用 Ultralytics 分别设置 `imgsz=832`、`640` 和 `416`。先预热每个尺寸，在同一批已解码图片上交替执行各方案，再记录同步后的 FPS 和 P95。使用相同的 `rect=False`、`conf=0.25` 和 `iou=0.70` 对照漏检。象棋实验的计时范围、精度和结果见[验证记录](../verification/chess-deployment-2026-11-20.json)。
+
 ## 命令行与文件接口
 
 检测蒸馏可直接选择通用预训练学生（如 80 类的 `yolo26n.pt`），无需先训练小模型。教师与数据集的类别名称和顺序必须一致；程序自动把学生检测头适配为该数据集的类别，并在本次运行保存 `student-initialized.pt`，不覆盖原始权重。适配后的初始化用于学生基线和蒸馏训练；类别不匹配的数据集会明确报错。仍需选用与教师蒸馏特征层兼容的学生架构。
@@ -42,7 +56,7 @@ python -m model_compression --request /path/to/request.json
 
 effective_config.json、summary.json，以及 artifacts 下的量化、剪枝或蒸馏模型产物；评估图表按配置与数据集生成。
 
-动态 INT8 主要处理 Linear/LSTM/GRU 等支持的层，不保证所有检测卷积被量化，也不保证加速。非结构化剪枝不自动减少部署延迟。检测蒸馏使用外部 Fork 的原生能力；标准包可能不支持。
+分类动态 INT8 主要处理 Linear、LSTM 和 GRU 等层。检测静态 INT8 报告记录有 INT8 权重的卷积数和本机推理延迟。检测蒸馏使用支持原生检测蒸馏的 Ultralytics Fork。
 
 已验证小分类模型 CPU 动态 INT8 与模型保存，以及通用学生自动适配后的一轮合成数据 CPU 检测蒸馏。完整数据集精度、大模型剪枝与 GPU 性能仍需按实际配置验证。更完整的范围见 [function-scope.md](function-scope.md)。
 

@@ -16,7 +16,7 @@
 
 ## 实现边界
 
-动态 INT8 主要处理 Linear/LSTM/GRU 等支持的层，不保证所有检测卷积被量化，也不保证加速。非结构化剪枝不自动减少部署延迟。检测蒸馏使用外部 Fork 的原生能力；标准包可能不支持。
+分类动态 INT8 主要处理 Linear、LSTM 和 GRU 等层。检测模型可导出 FP32、FP16 和静态 INT8 ONNX，报告同一验证集上的 mAP、体积和 ONNX Runtime CPU 延迟。检测蒸馏使用支持原生检测蒸馏的 Ultralytics Fork。
 
 ## 已有验证证据
 

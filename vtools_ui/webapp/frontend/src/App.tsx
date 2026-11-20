@@ -185,7 +185,7 @@ function configSectionId(toolId: string, path: string): string {
     if (has('compression.structured.', 'modules.compression.prune.structured')) return 'structured'
     if (has('compression.sparsity', 'compression.exclude', 'modules.compression.prune.unstructured')) return 'unstructured'
     if (has('distillation.', 'modules.distillation.')) return 'distillation'
-    if (has('modules.compression.quantize.')) return 'quantization'
+    if (has('compression.quantization.', 'modules.compression.quantize.')) return 'quantization'
     if (has('evaluation.', 'modules.baseline.', 'modules.model.')) return 'baseline'
     if (has('export.', 'modules.comparison.', 'modules.artifact.')) return 'export'
   }
@@ -552,6 +552,7 @@ function App() {
   const displayedFields = (isUtility ? selectedVariant?.fields || [] : tool?.fields || []).filter(field => {
     if (!tool?.modes) return true
     if (field.key === 'task') return false
+    if (field.key === 'device' && processingMode === 'detection_quantization') return false
     if (field.key === 'resource') return Boolean(currentMode?.public_weights)
     if (['teacher_weights', 'student_weights'].includes(field.key)) return processingMode === 'detection_distillation'
     return true
@@ -621,6 +622,17 @@ function App() {
                   <strong>跟随配置文件</strong>
                 </label>
               </div>
+            </div>}
+            {processingMode === 'detection_quantization' && <div className="form-grid processing-mode-description">
+              <label className="form-field"><span>ONNX 精度</span>
+                <select value={String(values.quantization_precision ?? '')} onChange={event => setValues({ ...values, quantization_precision: event.target.value })}>
+                  <option value="">跟随配置文件</option>
+                  <option value="fp32">FP32（基线）</option>
+                  <option value="fp16">FP16</option>
+                  <option value="int8">INT8（静态校准）</option>
+                </select>
+                <small>使用 ONNX Runtime CPU 复评和测速。INT8 从训练集取样校准。</small>
+              </label>
             </div>}
             {!currentMode && <p className="processing-mode-description">请选择本次要执行的模式。</p>}
           </div>}

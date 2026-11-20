@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, BinaryIO, Mapping
 SCHEMA_VERSION = 1
-COMPONENTS: dict[str, dict[str, Any]] = {'model_compression': {'worker': 'model_compression.run_model_compression', 'inputs': ('weights', 'data', 'train', 'val', 'teacher_weights', 'student_weights', 'structured_initial_weights'), 'options': ('device', 'task', 'structured_scale', 'structured_method', 'structured_methods', 'structured_epochs')}}
+COMPONENTS: dict[str, dict[str, Any]] = {'model_compression': {'worker': 'model_compression.run_model_compression', 'inputs': ('weights', 'data', 'train', 'val', 'teacher_weights', 'student_weights', 'structured_initial_weights'), 'options': ('device', 'task', 'structured_scale', 'structured_method', 'structured_methods', 'structured_epochs', 'quantization_precision')}}
 SELECTION = ('only', 'enable', 'disable')
 BENCHMARK_WORKERS = {}
 
@@ -93,6 +93,11 @@ def normalize_request(component: str, request: Mapping[str, Any], base: Path) ->
             raise ValueError(f'options.{key} 必须是非空字符串')
     if 'structured_methods' in options:
         _normalize_method_selection(options)
+    if 'quantization_precision' in options:
+        from model_compression.modules.onnx_quantization import ONNX_PRECISIONS
+
+        if options['quantization_precision'] not in ONNX_PRECISIONS:
+            raise ValueError('quantization_precision 须为 fp32、fp16 或 int8')
     if 'only' in options and (options.get('enable') or options.get('disable')):
         raise ValueError('only 不能与 enable/disable 同时使用')
     config = _path(raw.get('config'), base, 'config')

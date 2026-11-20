@@ -58,7 +58,7 @@ runN/
 
 `summary.json` 只在 `model` 段记录一次公共模型信息，阶段结果使用 `baseline`、`unstructured_pruning`、`structured_pruning`、`distillation`、`quantization` 和 `multi_processing` 六个类别；每类按需包含 `parameters`、`metrics` 和相对于 runN 的 `artifact` 路径。
 
-默认配置的任务是 YOLO 检测，因此动态 INT8 分类量化默认关闭；只有将 `model.task` 改为 `classify` 并准备分类数据后，才应显式启用 `compression.quantize.dynamic_int8`。检测压缩使用 `compression.prune.unstructured` 或 `compression.prune.structured`。
+YOLO 检测可用 `compression.quantize.onnx` 生成 FP32、FP16 或静态 INT8 ONNX。分类模型可用 `compression.quantize.dynamic_int8` 量化支持的层。两项均按需启用。检测 ONNX 的配置、精度对照和产物见 [接口说明](../docs/interface.md#检测-onnx-精度)。
 
 需要执行某个模块时，可以直接使用统一模块 ID：
 

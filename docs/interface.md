@@ -17,7 +17,7 @@
 }
 ```
 
-`component` 固定为 `model_compression`。允许输入字段：weights, data, train, val, teacher_weights, student_weights, structured_initial_weights。允许选项：device, task, structured_scale, structured_method, structured_methods, structured_epochs，及 `only`、`enable`、`disable` 模块 ID 数组。`only: []` 表示关闭所有模块，不恢复默认。未知字段报错；`only` 不与启用/关闭混用。
+`component` 固定为 `model_compression`。输入字段为 `weights`、`data`、`train`、`val`、`teacher_weights`、`student_weights` 和 `structured_initial_weights`。选项包括 `device`、`task`、`structured_scale`、`structured_method`、`structured_methods`、`structured_epochs`、`quantization_precision`，以及模块 ID 数组 `only`、`enable`、`disable`。`only: []` 表示关闭所有模块，`only` 与启用或关闭选项互斥。
 
 `structured_method` 可为 `taylor`、`lamp`、`fisher`、`bn_gamma`、`latency_search`、`torch_pruning` 或 `scale`。它覆盖本次 YAML 的 `compression.structured.method`，不修改原 YAML。
 
@@ -27,7 +27,7 @@
 
 ## 图形处理模式
 
-`/api/runs` 的表单 `values.processing_mode` 可选 `baseline`、`structured`、`unstructured`、`detection_distillation`、`quantization` 或 `classification_distillation`，按模型任务限制可用项。处理模式被转换为现有协议的 `options.only`，不能同时附带 `module_edits`。该表单字段不是 JSON 运行协议的新字段。
+`/api/runs` 的表单 `values.processing_mode` 可选 `baseline`、`structured`、`unstructured`、`detection_distillation`、`detection_quantization`、`quantization` 或 `classification_distillation`，按模型任务限制可用项。处理模式被转换为现有协议的 `options.only`，不能同时附带 `module_edits`。
 
 结构化剪枝模式的表单 `values.structured_methods` 传入勾选的方法 ID。单个方法沿用单次运行的输出结构。选择“跟随配置文件”时省略方法字段。
 
@@ -61,6 +61,18 @@
 ### 含自定义层的 YOLO checkpoint
 
 选择 `model.adapter: model_compression.adapters.ultralytics_custom_adapter`，将自定义层源码目录放入 `project.python_paths`，在 `model.adapter_options.import_modules` 填写模块名。可用 `model.adapter_options.required_layers` 验证重载后的模型仍包含指定层。检测评估、校准和微调继续使用 YOLO 原生流程。规格缩放需要模型 YAML 能重建自定义结构。
+
+## 检测 ONNX 精度
+
+`compression.quantize.onnx` 接收 Ultralytics YOLO `.pt` 检测权重，也支持有 `load_detector` 的 YOLO 兼容 adapter。部署输入固定为 batch 1，方形尺寸由 `dataset.input_size` 指定且可被模型步长整除。YOLO 数据集 YAML 用于复评，INT8 从其 `train` 划分取样。
+
+YAML 使用 `compression.quantization.precision`，默认 `int8`。可用请求的 `options.quantization_precision` 或 CLI 的 `--quantization-precision` 覆盖，取值为 `fp32`、`fp16` 或 `int8`。
+
+```bash
+python -m model_compression --config model_compression/config/config.yaml --run-dir user-data/runs/onnx-int8 --weights /path/to/best.pt --data /path/to/data.yaml --only model.parameters,baseline.evaluate,compression.quantize.onnx --quantization-precision int8
+```
+
+产物为 `model-fp32.onnx` 和所选精度的 ONNX。FP16 保持浮点输入和输出，INT8 使用 ORT 静态 Q/DQ、MinMax 校准和默认逐通道卷积权重量化。`calibration_images` 控制取样数，`nodes_to_exclude` 可保留敏感节点。输出复载后用 ONNX Runtime CPU 测速，并在同一验证集计算精度。若 `onnx-comparison.json` 的 mAP50–95 降幅超出 `max_map50_95_drop`，任务标记失败并保留诊断报告。
 
 ## 输出
 

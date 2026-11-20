@@ -89,6 +89,9 @@
               "minLength": 1,
               "pattern": "\\S"
             },
+            "quantization_precision": {
+              "enum": ["fp32", "fp16", "int8"]
+            },
             "structured_method": {
               "type": "string",
               "minLength": 1,

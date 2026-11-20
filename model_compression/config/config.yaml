@@ -24,6 +24,15 @@ dataset:
 compression:
   sparsity: 0.3
   exclude: []
+  quantization:
+    precision: int8
+    calibration_images: 64
+    per_channel: true
+    nodes_to_exclude: []
+    cpu_threads: 4
+    benchmark_warmup: 3
+    benchmark_repeats: 10
+    max_map50_95_drop: 0.05
   structured:
     method: taylor
     target_scale: m
@@ -80,6 +89,7 @@ modules:
   model.parameters: true
   baseline.evaluate: true
   compression.quantize.dynamic_int8: false
+  compression.quantize.onnx: false
   compression.prune.unstructured: true
   compression.prune.structured: false
   distillation.classification: false

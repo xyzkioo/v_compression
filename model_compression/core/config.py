@@ -123,6 +123,9 @@ def load_config(path: Optional[str | Path] = None) -> dict[str, Any]:
     if structured.get("initial_weights") is not None:
         structured["initial_weights"] = _resolve(structured["initial_weights"], project_root)
     config["compression"]["structured"] = structured
+    config["compression"]["quantization"] = _mapping(
+        config["compression"].get("quantization"), "compression.quantization"
+    )
     return config
 
 
