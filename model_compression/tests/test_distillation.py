@@ -1,7 +1,30 @@
+import tempfile
 import unittest
+from pathlib import Path
 
 
 class DistillationTests(unittest.TestCase):
+    def test_validation_loader_keeps_training_class_indices(self):
+        from PIL import Image
+        from model_compression.core.model_runtime import build_dataloaders
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for relative in ("train/cat", "train/dog", "val/dog"):
+                folder = root / relative
+                folder.mkdir(parents=True)
+                Image.new("RGB", (4, 4)).save(folder / "sample.png")
+            config = {"dataset": {"train": root / "train", "val": root / "val"}, "input_size": [4, 4]}
+            train, val = build_dataloaders(config)
+            self.assertEqual(val.dataset.class_to_idx, train.dataset.class_to_idx)
+            self.assertEqual(next(iter(val))[1].tolist(), [1])
+
+            unknown = root / "val" / "bird"
+            unknown.mkdir()
+            Image.new("RGB", (4, 4)).save(unknown / "sample.png")
+            with self.assertRaisesRegex(ValueError, "bird"):
+                build_dataloaders(config)
+
     def test_loss_matches_weighted_ce_and_kl(self):
         import torch
         import torch.nn.functional as F

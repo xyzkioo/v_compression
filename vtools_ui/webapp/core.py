@@ -152,7 +152,11 @@ def _editable_config_path(target: Path) -> Path:
         bundled_template = project_path(TOOLS[APP["primary_tool"]]["config"])
         if APP["portable"] and target == bundled_template and isinstance(project, dict):
             # A moved folder must not retain the builder's absolute template path.
-            project["root"] = os.path.relpath((ROOT.parent if getattr(sys, "frozen", False) else ROOT) / "inputs", user_target.parent)
+            inputs_root = (ROOT.parent if getattr(sys, "frozen", False) else ROOT) / "inputs"
+            try:
+                project["root"] = os.path.relpath(inputs_root, user_target.parent)
+            except ValueError:
+                project["root"] = str(inputs_root.resolve())
             text = json.dumps(data, ensure_ascii=False, indent=2) if target.suffix.lower() == ".json" else yaml.safe_dump(data, allow_unicode=True, sort_keys=False)
         elif project is None or isinstance(project, dict):
             project = project if project is not None else {}

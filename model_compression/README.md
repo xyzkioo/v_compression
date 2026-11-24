@@ -84,7 +84,7 @@ python -m model_compression --config model_compression/config/config.yaml --run-
 
 自定义检测模型使用 [检测 adapter 模板](adapters/detection_adapter_template.py)。通用检测 adapter 可用非结构化剪枝、幅值通道剪枝、LAMP、Taylor 和 Fisher。支持原生 YOLO 接口的 adapter 可通过 `load_detector` 进入 YOLO 路径。具体函数和返回值见[检测 adapter 接口](../docs/interface.md#自定义检测-adapter)。
 
-分类流程的 `dataset.train` 与 `dataset.val` 默认按 ImageFolder 目录读取；adapter 返回的 DataLoader 也可以产生 `(images, labels)` 或 `{"image": ..., "label": ...}`。YOLO 检测流程使用 `model.task: detect` 和 `dataset.data` 指向 `data.yaml`，保留每张图的多框标签。结构化方法见下表；依赖图方法物理删通道并同步调整关联层，检测头输出默认保留。`scale` 从模型 YAML 的 `scales` 按 `target_scale` 重建网络，建议提供对应规模的 `initial_weights`。默认精度门禁要求 mAP50–95 下降不超过 0.05，未通过的产物不能作为后续阶段输入。普通结构化方法可用 `quality_gate: false` 仅保留实验结果；速度搜索仍要求精度和延迟达标。微调和蒸馏若触发 AMP 检查，使用缓存 `~/.cache/ultralytics/weights/`（可用 `XDG_CACHE_HOME` 更改缓存根目录）。参数与依赖见 [config/config.yaml](config/config.yaml) 和 [REQUIREMENTS.md](REQUIREMENTS.md)。分类蒸馏使用：
+分类流程的 `dataset.train` 与 `dataset.val` 默认按 ImageFolder 目录读取。两者同时配置时验证集沿用训练集的类别索引，可以缺少训练类，遇到未定义的类别会报错。adapter 返回的 DataLoader 也可以产生 `(images, labels)` 或 `{"image": ..., "label": ...}`。YOLO 检测流程使用 `model.task: detect` 和 `dataset.data` 指向 `data.yaml`，保留每张图的多框标签。结构化方法见下表；依赖图方法物理删通道并同步调整关联层，检测头输出默认保留。`scale` 从模型 YAML 的 `scales` 按 `target_scale` 重建网络，建议提供对应规模的 `initial_weights`。默认精度门禁要求 mAP50–95 下降不超过 0.05，未通过的产物不能作为后续阶段输入。普通结构化方法可用 `quality_gate: false` 仅保留实验结果；速度搜索仍要求精度和延迟达标。微调和蒸馏若触发 AMP 检查，使用缓存 `~/.cache/ultralytics/weights/`（可用 `XDG_CACHE_HOME` 更改缓存根目录）。参数与依赖见 [config/config.yaml](config/config.yaml) 和 [REQUIREMENTS.md](REQUIREMENTS.md)。分类蒸馏使用：
 ```text
 Loss = (1 - alpha) * CE + alpha * T^2 * KL
 ```

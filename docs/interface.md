@@ -1,4 +1,4 @@
-# 模型压缩 接口 v1（软件 1.0）
+# 模型压缩 接口 v1（软件 1.0.1）
 
 ## 输入
 
@@ -85,3 +85,5 @@ stdout 只输出一个最终 JSON 对象；`--stream-logs` 将实时后端日志
 运行目录包含 `request.json`、`config.snapshot.yaml`、`result.json`、`stdout.log`、`stderr.log` 和 `artifacts/`。结果包含 `schema_version`、`component`、`component_version`、`status`、`exit_code`、`backend_exit_code`、`error`、`run_dir`、`artifacts` 与时间。输入校验失败时不创建目录，最终 JSON 返回 `run_dir: null`。JSON Schema 见本项目的[请求定义](../vtools_runtime/schemas/request-v1.schema.json)和[结果定义](../vtools_runtime/schemas/result-v1.schema.json)。
 
 业务文件位于 `artifacts/` 内；具体相对路径以 `result.json` 的 `artifacts[].path` 为准，将该路径拼接到本次 `run_dir` 即可定位文件。直接执行业务原生脚本时没有统一协议外层目录，其业务报告可以直接位于原生运行目录。
+
+后端创建业务目录后异常退出时，组件会在缺少原生摘要的情况下补写 `artifacts/summary.json`，记录退出码及日志中最后运行的模块和阶段。

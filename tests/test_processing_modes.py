@@ -11,6 +11,36 @@ from vtools_runtime.component import execute_request, normalize_request
 
 
 class ProcessingModeTests(unittest.TestCase):
+    def test_worker_exit_before_summary_preserves_failed_stage(self):
+        def interrupted_worker(_component, _request, _snapshot, root, _result, stdout, _stderr, _stream_logs):
+            run_dir = root / "artifacts"
+            run_dir.mkdir()
+            (run_dir / "effective_config.json").write_text(
+                '{"model":{"task":"detect"},"modules":{"compression.prune.structured":true}}',
+                encoding="utf-8",
+            )
+            stdout.write(("[compression.prune.structured] 开始\n"
+                          "[结构化剪枝] 开始：剪枝前测速\n").encode("utf-8"))
+            return -9
+
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            "vtools_runtime.component._run_worker", side_effect=interrupted_worker,
+        ):
+            root = Path(tmp)
+            config = root / "config.yaml"
+            config.write_text("project: {}\n", encoding="utf-8")
+            run_dir = root / "run"
+            result = execute_request("model_compression", {
+                "schema_version": 1, "component": "model_compression",
+                "config": str(config), "run_dir": str(run_dir),
+            })
+            self.assertEqual(result["status"], "failed")
+            self.assertEqual(result["backend_exit_code"], -9)
+            self.assertIn("artifacts/summary.json", [item["path"] for item in result["artifacts"]])
+            summary = json.loads((run_dir / "artifacts" / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["module_status"], {"compression.prune.structured": "failed"})
+            self.assertEqual(summary["failure_details"]["last_stage"], "剪枝前测速")
+
     def test_structured_methods_are_shared_by_catalog_and_cli(self):
         from model_compression.run_model_compression import build_parser
         from vtools_ui.webapp.catalog import public_catalog

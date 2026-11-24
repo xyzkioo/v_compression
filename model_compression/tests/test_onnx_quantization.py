@@ -3,13 +3,62 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import math
+import sys
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import patch
+from types import ModuleType, SimpleNamespace
+from unittest.mock import Mock, patch
 
+from model_compression.core.detection import run_detection_operation
 from model_compression.modules.onnx_quantization import export_onnx_precision
+from model_compression.run_model_compression import _RunState
+
+
+class OnnxQualityGateTests(unittest.TestCase):
+    def test_quantization_registers_only_candidates_that_pass_quality_gate(self):
+        for score, expected in ((0.68, True), (0.60, False), (float("nan"), False)):
+            with self.subTest(candidate_map=score), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                weights = root / "source.pt"
+                data = root / "data.yaml"
+                reference = root / "model-fp32.onnx"
+                candidate = root / "model-int8.onnx"
+                for path in (weights, data, reference, candidate):
+                    path.write_bytes(b"test artifact")
+                config = {
+                    "model": {"task": "detect", "weights": str(weights)},
+                    "dataset": {"data": str(data)},
+                    "compression": {"quantization": {"max_map50_95_drop": 0.05}},
+                }
+                ultralytics = ModuleType("ultralytics")
+                def detector_with_map(value):
+                    box = SimpleNamespace(map=value, map50=0.9, mp=0.8, mr=0.8)
+                    return SimpleNamespace(val=Mock(return_value=SimpleNamespace(box=box)))
+
+                ultralytics.YOLO = Mock(side_effect=[detector_with_map(0.7), detector_with_map(score)])
+                state = _RunState()
+                detector = SimpleNamespace(model=SimpleNamespace(parameters=lambda: []))
+                with patch.dict(sys.modules, {"ultralytics": ultralytics}), patch(
+                    "model_compression.core.detection.load_detector", return_value=detector,
+                ), patch(
+                    "model_compression.modules.onnx_quantization.export_onnx_precision",
+                    return_value=(candidate, reference, {"method": "onnx_int8", "precision": "int8"}),
+                ):
+                    if expected:
+                        result = run_detection_operation("compression.quantize.onnx", config, state, root, "run")
+                        self.assertEqual(result["status"], "succeeded")
+                    else:
+                        with self.assertRaisesRegex(ValueError, "限数值|降幅"):
+                            run_detection_operation("compression.quantize.onnx", config, state, root, "run")
+                self.assertEqual(Path(state.current(weights)[1]), candidate if expected else weights)
+                report = root / "artifacts" / "quantization" / "onnx-comparison.json"
+                if math.isfinite(score):
+                    self.assertEqual(json.loads(report.read_text(encoding="utf-8"))["quality_gate"]["passed"], expected)
+                else:
+                    self.assertFalse(report.exists())
 
 
 @unittest.skipUnless(all(importlib.util.find_spec(name) for name in ("torch", "onnx", "onnxruntime")),

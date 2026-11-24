@@ -15,6 +15,7 @@ OWNER = 'model_compression'
 FIXTURES = "from pathlib import Path\nimport json\nimport yaml\nroot = Path.cwd()\nimport torch\ntorch.manual_seed(0)\ntorch.save(torch.nn.Sequential(torch.nn.Conv2d(3,2,3), torch.nn.ReLU(), torch.nn.AdaptiveAvgPool2d(1), torch.nn.Flatten(), torch.nn.Linear(2,2)), root / 'fixture.pth')\n"
 CASE = {'config': {'project': {'root': '/fixture-root'}, 'model': {'adapter': 'torch', 'task': 'classify'}, 'export': {'path': '/fixture-root/fixture.pth'}, 'modules': {'model.parameters': True, 'compression.quantize.dynamic_int8': True, 'artifact.export': True}}, 'values': {'resource': '/fixture-root/fixture.pth', 'task': 'classify', 'device': 'cpu'}}
 def main():
+    manifest = json.loads((ROOT / 'component.json').read_text(encoding='utf-8'))
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model-python', required=True, type=Path)
     parser.add_argument('--report', type=Path, default=ROOT/'verification/independence.json')
@@ -58,7 +59,7 @@ def main():
         assert all(hashlib.sha256((fixtures/name).read_bytes()).hexdigest()==value for name,value in hashes.items())
         report.pop('request')
         report.pop('result')
-        report.update(passed=True, verified_on=datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat(), version='1.0', input_hashes_unchanged=True, schemas_valid=True, private_import_paths=True,
+        report.update(passed=True, verified_on=datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat(), version=manifest['version'], input_hashes_unchanged=True, schemas_valid=True, private_import_paths=True,
                       limitations=['This probe covers CPU HTTP/API tasks; GPU/TensorRT and native desktop windows are not exercised by this probe'])
     args.report.parent.mkdir(parents=True,exist_ok=True)
     args.report.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')

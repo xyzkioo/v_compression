@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import shutil
 import sys
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -600,6 +601,7 @@ def _build_summary(config: Mapping[str, Any], run_dir: Path, run_id: str,
         "errors": list(failures),
     }
     category_results: dict[str, list[dict[str, Any]]] = {}
+    processing_items: list[dict[str, Any]] = []
     module_status: dict[str, str] = {}
     for result in results:
         module_id = str(result.get("module", ""))
@@ -608,6 +610,8 @@ def _build_summary(config: Mapping[str, Any], run_dir: Path, run_id: str,
         category = _SUMMARY_CATEGORIES.get(module_id)
         if category:
             category_results.setdefault(category, []).append(item)
+            if category != "baseline":
+                processing_items.append(item)
         elif module_id == "comparison.report":
             summary["comparison"] = item
     summary["module_status"] = module_status
@@ -635,30 +639,31 @@ def _build_summary(config: Mapping[str, Any], run_dir: Path, run_id: str,
             summary[category] = {"status": "succeeded" if all(item.get("status") == "succeeded" for item in items) else "failed",
                                  "steps": items}
 
-    processing_items = [item for result in results
-                        if result.get("module") in _SUMMARY_CATEGORIES
-                        and result.get("module") not in {"baseline.evaluate", "model.parameters"}
-                        and result.get("status") == "succeeded"]
-    if len(processing_items) >= 2:
-        final = processing_items[-1]
+    succeeded_items = [item for item in processing_items if item["status"] == "succeeded"]
+    if len(succeeded_items) >= 2:
+        final = succeeded_items[-1]
         final_artifact = final.get("artifact")
         multi: dict[str, Any] = {
-            "status": "succeeded",
-            "parameters": {"steps": [str(result.get("module")) for result in results
-                                        if result.get("module") in _SUMMARY_CATEGORIES
-                                        and result.get("module") not in {"baseline.evaluate", "model.parameters"}]},
+            "status": "failed" if any(item["status"] == "failed" for item in processing_items) else "succeeded",
+            "parameters": {"steps": [item["module"] for item in processing_items]},
             "metrics": {"final_stage": final.get("module")},
         }
-        if final_artifact:
-            source = (run_dir / str(final_artifact)).resolve()
-            if source.is_file():
-                target = _artifact_path(run_dir, f"artifacts/multi_processing/{source.stem}-final{source.suffix}")
-                if source != target:
-                    shutil.copy2(source, target)
-                multi["artifact"] = _relative_path(run_dir, target)
-            else:
-                multi["status"] = "failed"
-                multi["error"] = f"最终阶段产物不存在：{source}"
+        try:
+            if not final_artifact:
+                raise ValueError(f"最终阶段 {final['module']} 未记录产物")
+            source = (run_dir / final_artifact).resolve()
+            if not source.is_file():
+                raise FileNotFoundError(f"最终阶段产物不存在：{source}")
+            target = _artifact_path(run_dir, f"artifacts/multi_processing/{source.stem}-final{source.suffix}")
+            with tempfile.TemporaryDirectory(dir=target.parent) as directory:
+                temporary = Path(directory) / target.name
+                shutil.copy2(source, temporary)
+                temporary.replace(target)
+            multi["artifact"] = _relative_path(run_dir, target)
+        except (OSError, ValueError) as error:
+            multi.update(status="failed", error=str(error))
+            summary["status"] = "failed"
+            summary["errors"].append(f"multi_processing: {error}")
         summary["multi_processing"] = multi
     return summary
 
@@ -797,7 +802,7 @@ def main() -> int:
     summary = _build_summary(config, run_dir, run_id, selected, results, failures, started_at)
     write_json(_result_path(run_dir, "summary.json"), summary)
     print(f"本次运行目录：{run_dir.resolve()}")
-    return 1 if failures else 0
+    return 1 if summary["status"] == "failed" else 0
 
 
 if __name__ == "__main__":

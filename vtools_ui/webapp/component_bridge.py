@@ -7,7 +7,7 @@ from pathlib import Path
 from .catalog import APP, ROOT, TOOLS
 
 def build_component_command(request: dict) -> tuple[str, list[str], str]:
-    from .core import STATE_DIR, MODEL_SUFFIXES, _atomic_text, _field_path, _option, _visible_run_name, load_config, python_executable_path, read_settings
+    from .core import STATE_DIR, _atomic_text, _field_path, _option, _visible_run_name, load_config, python_executable_path, read_settings
     component = APP['component']
     tool_id = str(request.get('tool_id', ''))
     if not component or tool_id != APP['primary_tool'] or tool_id not in TOOLS:
@@ -44,8 +44,7 @@ def build_component_command(request: dict) -> tuple[str, list[str], str]:
             inputs[key] = _field_path(values[key])
     if task:
         options['task'] = task
-    backend = values.get('backend') or 'pytorch'
-    if values.get('device') and values['device'] != 'auto' and (not False):
+    if values.get('device') and values['device'] != 'auto':
         options['device'] = _option(values['device'], ['auto', 'cpu', 'cuda:0'], '设备')
     edits = request.get('module_edits') or {}
     if not isinstance(edits, dict):

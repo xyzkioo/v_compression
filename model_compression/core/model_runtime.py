@@ -194,7 +194,8 @@ def extract_logits(output: Any):
     return output
 
 
-def _default_loader(path: Any, *, batch_size: int, train: bool, config: Mapping[str, Any]):
+def _default_loader(path: Any, *, batch_size: int, train: bool, config: Mapping[str, Any],
+                    class_to_idx: Mapping[str, int] | None = None):
     torch = require_torch()
     if not path:
         return None
@@ -219,6 +220,16 @@ def _default_loader(path: Any, *, batch_size: int, train: bool, config: Mapping[
         transforms.ToTensor(),
     ])
     dataset = datasets.ImageFolder(root, transform=transform)
+    if class_to_idx is not None and dataset.class_to_idx != class_to_idx:
+        unknown = dataset.class_to_idx.keys() - class_to_idx.keys()
+        if unknown:
+            raise ValueError(f"验证集包含训练集未定义的类别：{', '.join(sorted(unknown))}")
+        indices = {index: class_to_idx[name] for name, index in dataset.class_to_idx.items()}
+        dataset.samples = [(filename, indices[index]) for filename, index in dataset.samples]
+        dataset.imgs = dataset.samples
+        dataset.targets = [index for _, index in dataset.samples]
+        dataset.class_to_idx = dict(class_to_idx)
+        dataset.classes = sorted(class_to_idx, key=class_to_idx.__getitem__)
     return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=train, num_workers=0)
 
 
@@ -237,10 +248,10 @@ def build_dataloaders(config: Mapping[str, Any], adapter: Any = None):
     if not train_path and not val_path:
         return None, None
     common = {"input_size": config.get("input_size", [224, 224])}
-    return (
-        _default_loader(train_path, batch_size=batch_size, train=True, config=common),
-        _default_loader(val_path, batch_size=batch_size, train=False, config=common),
-    )
+    train = _default_loader(train_path, batch_size=batch_size, train=True, config=common)
+    val = _default_loader(val_path, batch_size=batch_size, train=False, config=common,
+                          class_to_idx=train.dataset.class_to_idx if train is not None else None)
+    return train, val
 
 
 def evaluate_classification(model: Any, loader: Any, *, device: Any = "auto") -> dict[str, Any]:

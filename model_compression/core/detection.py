@@ -174,8 +174,9 @@ def _isolated_validation_data(data_path: Path, run_dir: Path, split: str) -> Pat
         _link_or_copy(source_path, mirror_images, copy_files=True)
     if not mirror_labels.exists():
         _link_or_copy(original_labels, mirror_labels)
-    raw["path"] = str(mirror_root)
-    raw[split] = str(Path("images") / suffix)
+    # Ultralytics still checks the declared val directory when evaluating test.
+    raw["path"] = str(dataset_root)
+    raw[split] = str(mirror_images.resolve())
     isolated = run_dir / "_input" / "data.yaml"
     isolated.parent.mkdir(parents=True, exist_ok=True)
     isolated.write_text(yaml.safe_dump(raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
@@ -474,7 +475,10 @@ def evaluate_detector(detector, config: Mapping[str, Any], run_dir: Path, name: 
         value = getattr(box, name, None)
         if value is None:
             raise RuntimeError(f'Ultralytics 验证缺少检测指标：{name}')
-        return float(value)
+        number = float(value)
+        if not math.isfinite(number) or not 0 <= number <= 1:
+            raise ValueError(f'Ultralytics 验证指标 {name} 必须是 [0, 1] 内的有限数值，收到 {number}。')
+        return number
 
     return {'evaluation_map50': metric('map50'),
             'evaluation_map50_95': metric('map'),
@@ -822,12 +826,15 @@ def run_detection_operation(module_id, config, state, run_dir, run_id):
         after = before if candidate == reference else evaluate_detector(
             YOLO(str(candidate), task='detect'), validation_config, run_dir, 'onnx_quantized_validation')
         delta = after['evaluation_map50_95'] - before['evaluation_map50_95']
+        if not math.isfinite(delta):
+            raise ValueError('ONNX 量化前后的 mAP50–95 差值必须为有限数值。')
+        gate_passed = delta >= -max_drop
         metadata.update(details, **after, fp32_validation=before, map50_95_delta=delta,
                         fp32_artifact=str(reference), model_file_size_bytes=candidate.stat().st_size,
-                        quality_gate={'max_map50_95_drop': max_drop, 'passed': delta >= -max_drop})
+                        quality_gate={'max_map50_95_drop': max_drop, 'passed': gate_passed})
         report_path = output / 'onnx-comparison.json'
         write_json(report_path, {**metadata, 'artifact': candidate.name, 'fp32_artifact': reference.name})
-        if delta < -max_drop:
+        if not gate_passed:
             raise ValueError(f'ONNX {details["precision"]} 的 mAP50–95 降幅 {-delta:.4f} 超过 {max_drop:.4f}，请查看 {report_path}。')
         weights = candidate
     elif module_id == 'artifact.export':

@@ -16,10 +16,12 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, BinaryIO, Mapping
+
+from . import __version__
+
 SCHEMA_VERSION = 1
 COMPONENTS: dict[str, dict[str, Any]] = {'model_compression': {'worker': 'model_compression.run_model_compression', 'inputs': ('weights', 'data', 'train', 'val', 'teacher_weights', 'student_weights', 'structured_initial_weights'), 'options': ('device', 'task', 'structured_scale', 'structured_method', 'structured_methods', 'structured_epochs', 'quantization_precision')}}
 SELECTION = ('only', 'enable', 'disable')
-BENCHMARK_WORKERS = {}
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -147,15 +149,11 @@ def _snapshot_config(request: dict[str, Any], root: Path) -> Path:
     return target
 
 def _arguments(request: dict[str, Any], config: Path, artifacts: Path) -> list[str]:
-    checkpoint = False
-    args = ['--config', str(config)]
-    args += ['--json-output', str(artifacts / 'checkpoint.json')] if checkpoint else ['--run-dir', str(artifacts)]
+    args = ['--config', str(config), '--run-dir', str(artifacts)]
     for (key, value) in request['inputs'].items():
         flag = key.replace('_', '-')
         args.extend([f'--{flag}', str(value)])
     for (key, value) in request['options'].items():
-        if key == 'backend':
-            continue
         flag = f"--{key.replace('_', '-')}"
         if key in SELECTION:
             for item in value or ([''] if key == 'only' else []):
@@ -226,6 +224,7 @@ def _run_worker(
     env = dict(os.environ)
     env['PYTHONPATH'] = str(Path(__file__).resolve().parent.parent)
     env['PYTHONUNBUFFERED'] = '1'
+    env['PYTHONIOENCODING'] = 'utf-8'
     process = subprocess.Popen(command, cwd=root, env=env, stdout=subprocess.PIPE if stream_logs else stdout, stderr=subprocess.PIPE if stream_logs else stderr, start_new_session=os.name != 'nt')
     pumps = []
     pump_errors = []
@@ -286,7 +285,7 @@ def execute_request(component: str, request: Mapping[str, Any], *, base: Path | 
     normalized = normalize_request(component, request, (base or Path.cwd()).resolve())
     root = Path(normalized['run_dir'])
     root.mkdir(parents=True, exist_ok=False)
-    result: dict[str, Any] = {'schema_version': 1, 'component': component, 'component_version': '1.0', 'status': 'running', 'run_dir': str(root), 'started_at': _now(), 'finished_at': None, 'exit_code': None, 'backend_exit_code': None, 'error': None, 'artifacts': [], 'request': 'request.json', 'config': 'config.snapshot.yaml', 'logs': {'stdout': 'stdout.log', 'stderr': 'stderr.log'}}
+    result: dict[str, Any] = {'schema_version': 1, 'component': component, 'component_version': __version__, 'status': 'running', 'run_dir': str(root), 'started_at': _now(), 'finished_at': None, 'exit_code': None, 'backend_exit_code': None, 'error': None, 'artifacts': [], 'request': 'request.json', 'config': 'config.snapshot.yaml', 'logs': {'stdout': 'stdout.log', 'stderr': 'stderr.log'}}
     try:
         write_json(root / 'request.json', normalized)
         write_json(root / 'result.json', result)
@@ -300,6 +299,13 @@ def execute_request(component: str, request: Mapping[str, Any], *, base: Path | 
                 result.update(backend_exit_code=backend_code, exit_code=0 if backend_code == 0 else 2, status='skipped' if skipped else 'succeeded' if backend_code == 0 else 'failed')
                 if backend_code != 0:
                     result['error'] = {'type': 'BackendFailed', 'message': f'后端退出码 {backend_code}，详见 stdout.log、stderr.log 与业务报告'}
+                    from model_compression.core.interrupted_run import write_interrupted_summary
+
+                    try:
+                        stdout.flush()
+                        write_interrupted_summary(root / 'artifacts', root / 'stdout.log', backend_code, result['started_at'])
+                    except (OSError, ValueError) as error:
+                        stderr.write(f'无法补写失败摘要：{error}\n'.encode('utf-8'))
     except KeyboardInterrupt:
         result.update(status='cancelled', exit_code=130, error={'type': 'Cancelled', 'message': '用户中断运行'})
     except Exception as error:

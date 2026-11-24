@@ -45,7 +45,8 @@ def main():
             raise AssertionError('API accepted request without session token')
         bootstrap = api('bootstrap')
         assert bootstrap['app']['component'] == component and not bootstrap['app']['updates_enabled']
-        assert bootstrap['version'] == '1.0'
+        manifest = json.loads((core.ROOT / 'component.json').read_text(encoding='utf-8'))
+        assert bootstrap['version'] == manifest['version']
         assert set(bootstrap['catalog']) == set(TOOLS)
         for other in ('model_diagnostics', 'speed_test', 'model_visualization', 'model_compression'):
             assert (core.ROOT / other).exists() == (other == component), other

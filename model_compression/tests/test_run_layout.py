@@ -56,6 +56,29 @@ class RunLayoutTests(unittest.TestCase):
             self.assertTrue((run_dir / "_input" / "dataset" / "labels" / "val").exists())
             self.assertFalse((labels.parent / "val.cache").exists())
 
+    def test_test_split_mirror_preserves_relative_train_and_val_sources(self):
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset = root / "dataset"
+            for kind in ("images", "labels"):
+                for split in ("train", "val", "test"):
+                    (dataset / kind / split).mkdir(parents=True)
+            data = dataset / "data.yaml"
+            original = "path: .\ntrain: [images/train]\nval: images/val\ntest: images/test\nnames: [cat]\n"
+            data.write_text(original, encoding="utf-8")
+            run_dir = root / "run"
+
+            snapshot = _isolated_validation_data(data, run_dir, "test")
+            config = yaml.safe_load(snapshot.read_text(encoding="utf-8"))
+            self.assertEqual(Path(config["path"]), dataset)
+            self.assertEqual(config["train"], ["images/train"])
+            self.assertEqual(config["val"], "images/val")
+            self.assertEqual(Path(config["test"]), run_dir / "_input" / "dataset" / "images" / "test")
+            self.assertTrue(Path(config["test"]).is_dir())
+            self.assertEqual(data.read_text(encoding="utf-8"), original)
+
     def test_explicit_run_directory_cannot_overwrite_old_run(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "run1"
@@ -134,6 +157,30 @@ class RunLayoutTests(unittest.TestCase):
             self.assertNotIn("sha256", payload)
             self.assertNotIn("parent_version_id", payload)
             self.assertNotIn("version_id", payload)
+
+    def test_multi_processing_uses_last_transform_artifact_even_with_comparison(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = root / "first.pt"
+            final = root / "reduced.pt"
+            first.write_bytes(b"first")
+            final.write_bytes(b"final model")
+            results = [
+                {"module": "compression.quantize.dynamic_int8", "status": "succeeded", "artifact": {"path": str(first)}},
+                {"module": "compression.prune.unstructured", "status": "succeeded", "artifact": {"path": str(final)}},
+                {"module": "comparison.report", "status": "succeeded", "versions": []},
+            ]
+            selected = dict.fromkeys((result["module"] for result in results), True)
+            summary = _build_summary({}, root, "run1", selected, results, [], "now")
+            multi = summary["multi_processing"]
+            self.assertEqual(multi["metrics"]["final_stage"], "compression.prune.unstructured")
+            self.assertEqual((root / multi["artifact"]).read_bytes(), b"final model")
+
+            final.unlink()
+            summary = _build_summary({}, root, "run1", selected, results, [], "now")
+            self.assertEqual(summary["status"], "failed")
+            self.assertEqual(summary["multi_processing"]["status"], "failed")
+            self.assertIn("reduced.pt", summary["errors"][0])
 
 
 if __name__ == "__main__":
