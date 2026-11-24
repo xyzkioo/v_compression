@@ -2,6 +2,7 @@
 import ast
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -67,6 +68,31 @@ class IndependenceTests(unittest.TestCase):
             self.assertEqual(Path(config['data']['project']['root']), source.parent / 'files')
             self.assertEqual(config['data']['model']['adapter'], 'detect.py')
             self.assertEqual(source.read_text(encoding='utf-8'), original)
+
+    def test_system_install_stores_config_and_inputs_in_user_data(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            app = root / "app"
+            app.mkdir()
+            (app / ".system-install").touch()
+            runtime = app / "_internal"
+            template = runtime / TOOLS[APP["primary_tool"]]["config"]
+            template.parent.mkdir(parents=True)
+            template.write_text("project:\n  root: ../../inputs\n", encoding="utf-8")
+            data = root / "xdg"
+            profile = data / "v_compression"
+            with patch.dict(os.environ, {"XDG_DATA_HOME": str(data)}, clear=True), \
+                    patch.object(sys, "frozen", True, create=True), \
+                    patch.object(sys, "executable", str(app / "v_compression")), \
+                    patch.object(core, "ROOT", runtime), patch.object(core, "STATE_DIR", profile):
+                configure()
+                self.assertEqual(Path(os.environ["VTOOLS_USER_DATA"]), profile)
+                config = core.load_config(str(template))
+                self.assertTrue(Path(config["path"]).is_relative_to(profile))
+                self.assertEqual((Path(config["path"]).parent / config["data"]["project"]["root"]).resolve(),
+                                 profile / "inputs")
+                self.assertTrue((profile / "inputs").is_dir())
+                self.assertFalse((app / "user-data").exists())
 
 
 if __name__ == '__main__':

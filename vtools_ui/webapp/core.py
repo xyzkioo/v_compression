@@ -16,6 +16,7 @@ from typing import Any
 
 import yaml
 
+from ..standalone import is_system_install
 from .catalog import ROOT, TOOLS, APP
 from .config_fields import SIZE_FIELDS, SQUARE_SIZE_FIELDS, STRING_LIST_FIELDS, field_hint
 
@@ -153,6 +154,9 @@ def _editable_config_path(target: Path) -> Path:
         if APP["portable"] and target == bundled_template and isinstance(project, dict):
             # A moved folder must not retain the builder's absolute template path.
             inputs_root = (ROOT.parent if getattr(sys, "frozen", False) else ROOT) / "inputs"
+            if is_system_install():
+                inputs_root = STATE_DIR / "inputs"
+                inputs_root.mkdir(parents=True, exist_ok=True)
             try:
                 project["root"] = os.path.relpath(inputs_root, user_target.parent)
             except ValueError:
