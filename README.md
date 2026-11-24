@@ -1,4 +1,4 @@
-# v_compression 1.0.2
+# v_compression 1.0.3
 
 模型压缩项目，用于模型基线评估、量化、剪枝与知识蒸馏实验。
 
@@ -7,9 +7,11 @@
 从 [GitHub Releases](https://github.com/xyzkioo/v_compression/releases) 下载对应平台的安装包。
 
 - Windows x64 双击 setup.exe，安装后从开始菜单打开 v_compression。模型输入和用户数据分别位于安装目录下的 `inputs` 和 `user-data`。
-- Ubuntu amd64 用 `sudo apt install ./v-compression_1.0.2_amd64.deb` 安装，从应用菜单打开 v_compression。用户数据默认位于 `~/.local/share/v_compression`，也遵循 `XDG_DATA_HOME`。模型任务使用在设置里选择的 Python 环境。
+- Ubuntu amd64 用 `sudo apt install ./v-compression_1.0.3_amd64.deb` 安装，从应用菜单打开 v_compression。用户数据默认位于 `~/.local/share/v_compression`，也遵循 `XDG_DATA_HOME`。模型任务使用在设置里选择的 Python 环境。
 
 构建时先运行 `python packaging/build_app.py`。Windows 再运行 `python packaging/build_windows_installer.py`（需要 Inno Setup 6）。Ubuntu 再运行 `python packaging/build_deb.py`。
+
+安装版的「设置 → 软件更新」显示安装包下载进度、重试次数、校验和安装阶段。仓库为私有，应用内更新使用启动环境中的 `V_COMPRESSION_GITHUB_TOKEN`，可使用有权访问本仓库且拥有 Contents 只读权限的 GitHub 令牌。也可以登录 GitHub Releases 手动安装更新。
 
 ## 启动
 

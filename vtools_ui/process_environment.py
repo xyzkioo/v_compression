@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from typing import Mapping
 
+from .standalone import UPDATE_TOKEN_ENV
+
 
 def _prepend_path(environment: dict[str, str], name: str, value: Path) -> None:
     """Put *value* first in a path-list variable without duplicating it."""
@@ -40,6 +42,7 @@ def build_tool_environment(
     """
 
     environment = dict(os.environ if inherited is None else inherited)
+    environment.pop(UPDATE_TOKEN_ENV, None)
     environment.update({"PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"})
     # Preserve .venv/bin/python symlinks: resolving them selects uv's base
     # interpreter and makes Python lose the virtual environment's site-packages.

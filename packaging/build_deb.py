@@ -52,7 +52,7 @@ def main() -> int:
             f"Package: {PACKAGE}\nVersion: {version}\nArchitecture: {architecture}\n"
             "Maintainer: v_compression project\nSection: science\nPriority: optional\n"
             "Depends: libegl1, libgl1, libnss3, libxkbcommon-x11-0, libxcb-cursor0, libxcb-icccm4, "
-            "libxcb-keysyms1, libxcb-shape0, libasound2 | libasound2t64, libpulse0\n"
+            "libxcb-keysyms1, libxcb-shape0, libasound2 | libasound2t64, libpulse0, pkexec | policykit-1\n"
             "Description: Model compression workbench\n"
             " Desktop workbench for evaluation, quantization, pruning and distillation.\n",
             encoding="utf-8",

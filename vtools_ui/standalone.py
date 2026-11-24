@@ -3,11 +3,18 @@ import os
 import sys
 from pathlib import Path
 COMPONENT = 'model_compression'
+UPDATE_TOKEN_ENV = "V_COMPRESSION_GITHUB_TOKEN"
 APPS = {COMPONENT: {"slug": 'v_compression', "title": 'v_compression', "tool": 'compression'}}
 
 
 def is_system_install() -> bool:
     return getattr(sys, "frozen", False) and (Path(sys.executable).parent / ".system-install").is_file()
+
+
+def is_installed() -> bool:
+    return is_system_install() or (
+        getattr(sys, "frozen", False) and (Path(sys.executable).parent / ".windows-install").is_file()
+    )
 
 
 def configure(component=None):
@@ -22,4 +29,5 @@ def configure(component=None):
     os.environ.setdefault("VTOOLS_USER_DATA", str(data_dir))
 def identity():
     configure()
-    return {"component": COMPONENT, "title": 'v_compression', "primary_tool": 'compression', "portable": True, "updates_enabled": False}
+    return {"component": COMPONENT, "title": 'v_compression', "primary_tool": 'compression',
+            "portable": True, "updates_enabled": is_installed()}

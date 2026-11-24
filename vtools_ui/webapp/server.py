@@ -27,6 +27,7 @@ from .core import (
     python_executable_path, result_file, save_config, save_settings,
 )
 from .tasks import TaskManager
+from .updater import check_update, install_update
 
 DIST = Path(__file__).resolve().parent / "frontend" / "dist"
 
@@ -37,10 +38,24 @@ class WorkbenchServer(ThreadingHTTPServer):
     def __init__(self, manager: TaskManager) -> None:
         super().__init__(("127.0.0.1", 0), ApiHandler)
         self.manager = manager
+        self._update_lock = threading.Lock()
+        self.update_progress: dict | None = None
         self.token = secrets.token_urlsafe(32)
         self.results_root = project_path(str(read_settings()["results_root"]))
         if getattr(sys, "frozen", False):
             self.results_root.mkdir(parents=True, exist_ok=True)
+
+    def _report_update_progress(self, progress: dict) -> None:
+        self.update_progress = progress
+
+    def run_update(self) -> dict[str, str]:
+        if not self._update_lock.acquire(blocking=False):
+            raise RuntimeError("已有更新正在进行")
+        try:
+            return install_update(self._report_update_progress)
+        finally:
+            self.update_progress = None
+            self._update_lock.release()
 
 
 class ApiHandler(BaseHTTPRequestHandler):
@@ -95,7 +110,9 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path == "/api/bootstrap":
             self._json({"catalog": public_catalog(), "settings": read_settings(), "history": history(), "state": self.server.manager.state(), "version": __version__, "app": APP})
         elif path == "/api/update/check":
-            self._json({"status": "unsupported", "current_version": __version__, "message": "目录版请通过替换程序文件更新，保留 user-data。"})
+            self._json(check_update())
+        elif path == "/api/update/progress":
+            self._json({"progress": self.server.update_progress})
         elif path == "/api/environments":
             self._json({"environments": environments()})
         elif path == "/api/config":
@@ -171,7 +188,10 @@ class ApiHandler(BaseHTTPRequestHandler):
             elif path == "/api/config/save":
                 self._json(save_config(str(body.get("path", "")), str(body.get("text", ""))))
             elif path == "/api/update/install":
-                raise ValueError("目录版通过替换本项目文件更新；保留 user-data。")
+                state = self.server.manager.state()
+                if state and state.get("status") in {"starting", "running", "stopping"}:
+                    raise ValueError("请先结束正在运行的任务再安装更新")
+                self._json(self.server.run_update())
             elif path == "/api/runs":
                 self._json({"state": self.server.manager.start(body)})
             elif path == "/api/runs/stop":

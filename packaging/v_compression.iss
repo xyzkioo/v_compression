@@ -27,6 +27,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked
 Name: "{app}\inputs"; Flags: uninsneveruninstall
 Name: "{app}\user-data"; Flags: uninsneveruninstall
 
+[INI]
+Filename: "{app}\.windows-install"; Section: "Installation"; Key: "Platform"; String: "Windows"; Flags: uninsdeletesection
+
 [Files]
 Source: "{#SourceDir}\v_compression.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\component.json"; DestDir: "{app}"; Flags: ignoreversion
