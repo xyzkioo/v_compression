@@ -1,4 +1,4 @@
-"""Find and securely install updates from this project's private GitHub Releases."""
+"""Find and securely install updates from this project's GitHub Releases."""
 
 from __future__ import annotations
 
@@ -20,7 +20,8 @@ from .core import STATE_DIR
 from .update_download import MAX_PACKAGE_BYTES, download_package, ignore_progress
 
 
-API_ROOT = "https://api.github.com/repos/xyzkioo/v_compression"
+REPOSITORY = "xyzkioo/v_compression"
+API_ROOT = f"https://api.github.com/repos/{REPOSITORY}"
 MAX_RELEASE_BYTES = 4 * 1024 * 1024
 
 
@@ -30,9 +31,21 @@ def _request(path: str, token: str, *, accept: str, downloaded: int = 0) -> Requ
     if downloaded:
         headers["Range"] = f"bytes={downloaded}-"
     request = Request(f"{API_ROOT}/{path}", headers=headers)
-    # A private asset can redirect to a signed CDN URL. Keep the token on the API request.
-    request.add_unredirected_header("Authorization", f"Bearer {token}")
+    if token:
+        # Keep the token on the API request when GitHub redirects to the CDN.
+        request.add_unredirected_header("Authorization", f"Bearer {token}")
     return request
+
+
+def _download_request(info: dict, token: str, downloaded: int) -> Request:
+    if token:
+        return _request(f"releases/assets/{info['asset_id']}", token,
+                        accept="application/octet-stream", downloaded=downloaded)
+    version, name = info["latest_version"], info["asset_name"]
+    headers = {"User-Agent": f"v_compression/{__version__}"}
+    if downloaded:
+        headers["Range"] = f"bytes={downloaded}-"
+    return Request(f"https://github.com/{REPOSITORY}/releases/download/v{version}/{name}", headers=headers)
 
 
 def _architecture() -> str:
@@ -72,16 +85,16 @@ def check_update() -> dict:
     if not is_installed():
         return {**info, "status": "unsupported", "message": "目录版请通过替换程序文件更新，保留 user-data。"}
     token = os.environ.get(UPDATE_TOKEN_ENV, "").strip()
-    if not token:
-        return {**info, "status": "authentication_required",
-                "message": f"仓库为私有。配置 {UPDATE_TOKEN_ENV} 并重启后即可在应用内更新，也可登录 GitHub Releases 手动下载。"}
     request = _request("releases?per_page=30", token, accept="application/vnd.github+json")
     try:
         with urlopen(request, timeout=15) as response:
             payload = response.read(MAX_RELEASE_BYTES + 1)
     except HTTPError as error:
         error.close()
-        if error.code in {401, 403, 404}:
+        if not token and error.code in {401, 404}:
+            return {**info, "status": "authentication_required",
+                    "message": f"GitHub 发布不可匿名读取。私有仓库可配置 {UPDATE_TOKEN_ENV} 并重启，或登录 GitHub Releases 手动下载。"}
+        if token and error.code in {401, 403, 404}:
             raise RuntimeError(f"GitHub 拒绝读取发布信息（HTTP {error.code}），请确认令牌有仓库读取权限。") from error
         raise RuntimeError(f"检查更新失败，HTTP {error.code}") from error
     except (URLError, OSError) as error:
@@ -131,11 +144,10 @@ def install_update(report: Callable[[dict], None] = ignore_progress) -> dict[str
         raise RuntimeError(str(info["message"]))
     if os.name != "nt" and shutil.which("pkexec") is None:
         raise RuntimeError("缺少 pkexec，请登录 GitHub Releases 下载 .deb 并通过 apt 安装。")
-    token = os.environ[UPDATE_TOKEN_ENV].strip()
+    token = os.environ.get(UPDATE_TOKEN_ENV, "").strip()
 
     def make_request(downloaded: int) -> Request:
-        return _request(f"releases/assets/{info['asset_id']}", token,
-                        accept="application/octet-stream", downloaded=downloaded)
+        return _download_request(info, token, downloaded)
 
     package = download_package(STATE_DIR / "updates" / info["asset_name"], info["asset_size"],
                                info["asset_digest"], make_request, report)

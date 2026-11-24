@@ -2,7 +2,7 @@
   "component": "model_compression",
   "slug": "v_compression",
   "title": "v_compression",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "schema_version": 1,
   "launcher": "v_compression"
 }
