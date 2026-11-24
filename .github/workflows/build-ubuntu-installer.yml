@@ -1,0 +1,99 @@
+name: Build v_compression 1.0.2 Ubuntu installer
+on:
+  push:
+    branches: ['build/v1.0.2-ubuntu']
+permissions:
+  contents: write
+jobs:
+  installer:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1 libnss3 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libasound2 libpulse0 xvfb xauth desktop-file-utils
+          python -m pip install -r requirements.txt 'PySide6==6.8.3' PyInstaller QtPy
+      - name: Build amd64 installer
+        run: |
+          npm ci --prefix vtools_ui/webapp/frontend
+          npm run build --prefix vtools_ui/webapp/frontend
+          python packaging/build_app.py
+          python packaging/build_deb.py
+          deb=dist/v-compression_1.0.2_amd64.deb
+          test "$(dpkg-deb -f "$deb" Package)" = v-compression
+          test "$(dpkg-deb -f "$deb" Version)" = 1.0.2
+          test "$(dpkg-deb -f "$deb" Architecture)" = amd64
+          dpkg-deb -I "$deb"
+      - name: Install and launch as a normal user
+        run: |
+          sudo dpkg -i dist/v-compression_1.0.2_amd64.deb
+          desktop-file-validate /usr/share/applications/v_compression.desktop
+          test "$(dpkg-query -W -f='${Version}' v-compression)" = 1.0.2
+          test ! -w /opt/v_compression
+          cmp vtools_ui/webapp/frontend/dist/index.html /opt/v_compression/_internal/vtools_ui/webapp/frontend/dist/index.html
+          cmp model_compression/core/interrupted_run.py /opt/v_compression/_internal/model_compression/core/interrupted_run.py
+          /usr/bin/v_compression --help
+          python - <<'PY'
+          import os
+          import signal
+          import subprocess
+          import time
+          from pathlib import Path
+          scratch = Path(os.environ["RUNNER_TEMP"])
+          path = scratch / "installed-desktop.log"
+          env = dict(os.environ, XDG_DATA_HOME=str(scratch / "profile"))
+          with path.open("w", encoding="utf-8") as log:
+              process = subprocess.Popen(["xvfb-run", "-a", "/usr/bin/v_compression"], env=env, stdout=log,
+                                         stderr=subprocess.STDOUT, start_new_session=True)
+              try:
+                  for _ in range(70):
+                      if "窗口已显示" in path.read_text(encoding="utf-8", errors="replace"):
+                          print("Installed Qt window displayed.")
+                          break
+                      if process.poll() is not None:
+                          raise RuntimeError("Installed desktop exited before displaying its window.")
+                      time.sleep(0.5)
+                  else:
+                      raise RuntimeError("Installed desktop startup timed out.")
+              except RuntimeError:
+                  print(path.read_text(encoding="utf-8", errors="replace"))
+                  raise
+              finally:
+                  try:
+                      os.killpg(process.pid, signal.SIGTERM)
+                  except ProcessLookupError:
+                      pass
+                  process.wait(timeout=10)
+          PY
+          sudo dpkg -r v-compression
+          test ! -e /usr/bin/v_compression
+      - name: Upload verified installer to release draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          release=$(gh api repos/"$GH_REPO"/releases/456318555)
+          test "$(jq -r .draft <<< "$release")" = true
+          url=$(jq -r '.upload_url | split("{")[0]' <<< "$release")
+          cd dist
+          sha256sum -c v-compression_1.0.2_amd64.deb.sha256
+          for file in v-compression_1.0.2_amd64.deb v-compression_1.0.2_amd64.deb.sha256; do
+            hash="sha256:$(sha256sum "$file" | cut -d ' ' -f 1)"
+            bytes=$(stat -c '%s' "$file")
+            asset=$(curl --fail-with-body --silent --show-error \
+              -X POST -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Content-Type: application/octet-stream' --data-binary @"$file" \
+              "$url?name=$file")
+            jq -e --arg digest "$hash" --argjson size "$bytes" \
+              '.state == "uploaded" and .digest == $digest and .size == $size' <<< "$asset"
+            printf '%s %s bytes %s\n' "$file" "$bytes" "$hash"
+          done
